@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPV Envelope Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --accent-orange: #ff6b35;
+      --accent-orange-dim: #cc5529;
+      --accent-cyan: #00d4aa;
+      --accent-purple: #8b5cf6;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --border: #2a2a3a;
+      --success: #22c55e;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--accent-orange) 0%, transparent 70%);
+      opacity: 0.08;
+      filter: blur(80px);
+      top: -200px;
+      right: -200px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-glow-2 {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 70%);
+      opacity: 0.06;
+      filter: blur(80px);
+      bottom: -150px;
+      left: -150px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dim) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 20px;
+      color: white;
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    .input-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-tertiary);
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      background: var(--accent-orange);
+      color: white;
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25);
+    }
+
+    .input-group {
+      margin-bottom: 24px;
+    }
+
+    .input-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .network-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .network-btn {
+      flex: 1;
+      padding: 12px 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .network-btn:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .network-btn.active {
+      background: var(--accent-orange);
+      border-color: var(--accent-orange);
+      color: white;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 16px 20px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .text-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .text-input:focus {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+    }
+
+    textarea.text-input {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .btn-generate {
+      width: 100%;
+      padding: 18px 32px;
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dim) 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn-generate:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .progress-section {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .result-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .result-section.visible {
+      display: block;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .result-stats {
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 10px 18px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-color: var(--accent-orange);
+    }
+
+    .btn-action.primary {
+      background: var(--accent-orange);
+      border-color: var(--accent-orange);
+      color: white;
+    }
+
+    .btn-action.primary:hover {
+      background: var(--accent-orange-dim);
+    }
+
+    .utxo-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .utxo-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .utxo-list::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+    }
+
+    .utxo-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .utxo-item {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .utxo-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .utxo-item:last-child {
+      border-bottom: none;
+    }
+
+    .utxo-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .utxo-txid {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+    }
+
+    .utxo-amount {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .utxo-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .utxo-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .utxo-status.confirmed {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+    }
+
+    .utxo-status.unconfirmed {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 1.1rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .json-output {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text-secondary);
+    }
+
+    .json-output .key {
+      color: var(--accent-cyan);
+    }
+
+    .json-output .string {
+      color: var(--accent-orange);
+    }
+
+    .json-output .number {
+      color: var(--accent-purple);
+    }
+
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    .info-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .info-card h3 {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent-orange);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .helper-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">⧫</div>
+        <h1>SPV Envelope Generator</h1>
+      </div>
+      <p class="subtitle">Generate Merkle proofs for your BSV UTXOs</p>
+    </header>
+
+    <div class="input-section">
+      <div class="tabs">
+        <button class="tab active" data-tab="address">By Address</button>
+        <button class="tab" data-tab="txid">By TXID</button>
+        <button class="tab" data-tab="bulk">Bulk Addresses</button>
+      </div>
+
+      <div class="network-toggle">
+        <button class="network-btn active" data-network="mainnet">Mainnet</button>
+        <button class="network-btn" data-network="testnet">Testnet</button>
+      </div>
+
+      <!-- Address Tab -->
+      <div class="tab-content active" id="tab-address">
+        <div class="input-group">
+          <label for="address">BSV Address</label>
+          <input type="text" id="address" class="text-input" placeholder="Enter a BSV address (1..., 3..., or q...)">
+          <p class="helper-text">Enter your receiving address to fetch Merkle proofs for all UTXOs</p>
+        </div>
+      </div>
+
+      <!-- TXID Tab -->
+      <div class="tab-content" id="tab-txid">
+        <div class="input-group">
+          <label for="txid">Transaction ID</label>
+          <input type="text" id="txid" class="text-input" placeholder="Enter a transaction ID (64 hex characters)">
+        </div>
+      </div>
+
+      <!-- Bulk Tab -->
+      <div class="tab-content" id="tab-bulk">
+        <div class="input-group">
+          <label for="bulk-addresses">Multiple Addresses</label>
+          <textarea id="bulk-addresses" class="text-input" placeholder="Enter one address per line..."></textarea>
+          <p class="helper-text">Process multiple addresses at once - great for backing up all your wallets</p>
+        </div>
+      </div>
+
+      <div class="progress-section" id="progress-section">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-text" id="progress-text">Processing...</p>
+      </div>
+
+      <button class="btn-generate" id="generate-btn">
+        Generate SPV Envelopes
+      </button>
+    </div>
+
+    <div class="result-section" id="result-section">
+      <div class="result-header">
+        <div class="result-stats">
+          <div class="stat">
+            <div class="stat-value" id="stat-utxos">0</div>
+            <div class="stat-label">UTXOs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="stat-balance">0</div>
+            <div class="stat-label">Total BSV</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="stat-proofs">0</div>
+            <div class="stat-label">With Proofs</div>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn-action" id="copy-btn">Copy All</button>
+          <button class="btn-action primary" id="download-btn">Download JSON</button>
+        </div>
+      </div>
+      <div class="utxo-list" id="utxo-list"></div>
+    </div>
+
+    <div class="info-cards">
+      <div class="info-card">
+        <h3><span>📍</span> Address-Based Lookup</h3>
+        <p>Enter any BSV address to automatically discover all UTXOs and generate their Merkle proofs. No need to track individual TXIDs.</p>
+      </div>
+      <div class="info-card">
+        <h3><span>🔐</span> Why Save Merkle Proofs?</h3>
+        <p>As BSV scales, free UTXO lookups may disappear. Your Merkle proofs let you prove ownership forever, independent of any service.</p>
+      </div>
+      <div class="info-card">
+        <h3><span>💾</span> Complete Backup</h3>
+        <p>Download contains everything needed: raw transaction, merkle path, block info. Combined with your private key, you're fully sovereign.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p>Inspired by <a href="https://github.com/p2ppsr/hashwrap" target="_blank">Hashwrap by Project Babbage</a> • Uses <a href="https://whatsonchain.com" target="_blank">WhatsOnChain API</a></p>
+    </footer>
+  </div>
+
+  <!-- Modal for viewing individual envelope -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>SPV Envelope</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre class="json-output" id="modal-json"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let network = 'main';
+    let currentTab = 'address';
+    let allResults = null;
+
+    // Elements
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const networkBtns = document.querySelectorAll('.network-btn');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultSection = document.getElementById('result-section');
+    const progressSection = document.getElementById('progress-section');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const utxoList = document.getElementById('utxo-list');
+    const modal = document.getElementById('modal');
+    const modalJson = document.getElementById('modal-json');
+    const modalClose = document.getElementById('modal-close');
+
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        
+        tabContents.forEach(content => {
+          content.classList.toggle('active', content.id === `tab-${currentTab}`);
+        });
+      });
+    });
+
+    // Network toggle
+    networkBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        networkBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        network = btn.dataset.network === 'mainnet' ? 'main' : 'test';
+      });
+    });
+
+    // Modal
+    modalClose.addEventListener('click', () => modal.classList.remove('visible'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('visible');
+    });
+
+    // API helpers
+    const WOC_BASE = () => `https://api.whatsonchain.com/v1/bsv/${network}`;
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    async function fetchText(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    }
+
+    // Get UTXOs for an address
+    async function getAddressUtxos(address) {
+      const data = await fetchJson(`${WOC_BASE()}/address/${address}/unspent`);
+      return data || [];
+    }
+
+    // Get address history (all transactions)
+    async function getAddressHistory(address) {
+      const data = await fetchJson(`${WOC_BASE()}/address/${address}/history`);
+      return data || [];
+    }
+
+    // Get raw transaction
+    async function getRawTx(txid) {
+      return await fetchText(`${WOC_BASE()}/tx/${txid}/hex`);
+    }
+
+    // Get merkle proof - try standard endpoint first, then TSC format
+    async function getMerkleProof(txid) {
+      // Try standard /proof endpoint first
+      try {
+        const res = await fetch(`${WOC_BASE()}/tx/${txid}/proof`);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text !== 'null' && text !== '[]') {
+            console.log(`Got proof from /proof endpoint for ${txid}`);
+            return { data: JSON.parse(text), format: 'standard' };
+          }
+        }
+      } catch (e) {
+        console.log(`Standard proof endpoint failed: ${e.message}`);
+      }
+
+      // Try TSC format endpoint as fallback
+      try {
+        const res = await fetch(`${WOC_BASE()}/tx/${txid}/proof/tsc`);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text !== 'null' && text !== '[]') {
+            console.log(`Got proof from /proof/tsc endpoint for ${txid}`);
+            return { data: JSON.parse(text), format: 'tsc' };
+          }
+        }
+      } catch (e) {
+        console.log(`TSC proof endpoint failed: ${e.message}`);
+      }
+
+      console.log(`No proof available for ${txid}`);
+      return null;
+    }
+
+    // Get block header (80 bytes hex)
+    async function getBlockHeader(blockHash) {
+      try {
+        // WoC endpoint: /block/{hash}/header returns JSON with header info
+        // We need to fetch the block and extract header fields, or use a different approach
+        const res = await fetch(`${WOC_BASE()}/block/${blockHash}/header`);
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Block header response:', data);
+          
+          // If it returns raw hex directly
+          if (typeof data === 'string' && data.length === 160) {
+            return data;
+          }
+          
+          // If it returns JSON with header fields, we need to construct the 80-byte header
+          // Block header structure: version(4) + prevBlock(32) + merkleRoot(32) + time(4) + bits(4) + nonce(4)
+          if (data && data.merkleroot) {
+            const header = constructBlockHeader(data);
+            if (header) {
+              return header;
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`Failed to fetch block header: ${e.message}`);
+      }
+      return null;
+    }
+
+    // Construct 80-byte block header from JSON data
+    function constructBlockHeader(data) {
+      try {
+        // Convert version to 4-byte little-endian hex
+        const version = toLittleEndian(data.version || data.versionHex, 4);
+        
+        // Previous block hash (32 bytes, already in little-endian in the response typically)
+        const prevBlock = reverseHex(data.previousblockhash || '0'.repeat(64));
+        
+        // Merkle root (32 bytes)
+        const merkleRoot = reverseHex(data.merkleroot);
+        
+        // Time (4 bytes little-endian)
+        const time = toLittleEndian(data.time, 4);
+        
+        // Bits (4 bytes) - usually provided as hex string
+        const bits = typeof data.bits === 'string' 
+          ? reverseHex(data.bits.padStart(8, '0'))
+          : toLittleEndian(data.bits, 4);
+        
+        // Nonce (4 bytes little-endian)
+        const nonce = toLittleEndian(data.nonce, 4);
+        
+        const header = version + prevBlock + merkleRoot + time + bits + nonce;
+        
+        if (header.length === 160) {
+          console.log('Constructed block header:', header.substring(0, 40) + '...');
+          return header;
+        }
+        console.log('Header construction failed, length:', header.length);
+        return null;
+      } catch (e) {
+        console.log('Error constructing header:', e.message);
+        return null;
+      }
+    }
+
+    // Convert number to little-endian hex string
+    function toLittleEndian(value, bytes) {
+      if (typeof value === 'string' && value.startsWith('0x')) {
+        value = parseInt(value, 16);
+      }
+      if (typeof value === 'string' && /^[0-9a-fA-F]+$/.test(value)) {
+        // Already hex, just reverse it
+        return reverseHex(value.padStart(bytes * 2, '0'));
+      }
+      let hex = value.toString(16).padStart(bytes * 2, '0');
+      return reverseHex(hex);
+    }
+
+    // Reverse byte order of hex string
+    function reverseHex(hex) {
+      return hex.match(/.{2}/g).reverse().join('');
+    }
+
+    // Get transaction details
+    async function getTxDetails(txid) {
+      return await fetchJson(`${WOC_BASE()}/tx/hash/${txid}`);
+    }
+
+    // Generate SHA256 checksum of envelope data
+    async function generateChecksum(data) {
+      const str = JSON.stringify(data);
+      const encoder = new TextEncoder();
+      const dataBuffer = encoder.encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Generate envelope for a single UTXO
+    async function generateEnvelope(txid, vout) {
+      const rawTx = await getRawTx(txid);
+      const txInfo = await getTxDetails(txid);
+      const proofResult = await getMerkleProof(txid);
+      
+      // Debug logging
+      console.log(`TXID: ${txid}`);
+      console.log(`Confirmations from txInfo: ${txInfo?.confirmations}`);
+      console.log(`Proof response:`, proofResult);
+
+      const envelope = {
+        txid,
+        vout,
+        rawTx,
+        value: txInfo?.vout?.[vout]?.value || null,
+        confirmations: txInfo?.confirmations || 0,
+        blockHeight: txInfo?.blockheight || null,
+        blockHash: txInfo?.blockhash || null
+      };
+
+      // Check if we have a valid proof
+      if (proofResult && proofResult.data) {
+        const proof = proofResult.data;
+        const format = proofResult.format;
+        
+        let proofData = null;
+        
+        if (format === 'tsc') {
+          // TSC format: [{"index":0,"txOrId":"...","target":"...","nodes":["..."]}]
+          proofData = Array.isArray(proof) ? proof[0] : proof;
+          if (proofData) {
+            envelope.proof = {
+              txOrId: proofData.txOrId || txid,
+              target: proofData.target,
+              targetType: proofData.targetType || 'header', // TSC uses block hash as target
+              nodes: proofData.nodes || [],
+              index: proofData.index ?? 0
+            };
+            envelope.hasProof = true;
+            envelope.proofFormat = 'TSC';
+          }
+        } else {
+          // Standard format: [{"blockHash":"...","branches":[...],"merkleRoot":"..."}]
+          proofData = Array.isArray(proof) ? proof[0] : proof;
+          if (proofData && (proofData.merkleRoot || proofData.root || proofData.branches)) {
+            envelope.proof = {
+              txOrId: txid,
+              target: proofData.merkleRoot || proofData.root,
+              targetType: 'merkleRoot',
+              nodes: proofData.nodes || (proofData.branches ? proofData.branches.map(b => b.hash) : []),
+              index: proofData.index ?? proofData.txIndex ?? 0,
+              blockHash: proofData.blockHash
+            };
+            envelope.hasProof = true;
+            envelope.proofFormat = 'standard';
+          }
+        }
+        
+        // Fetch the 80-byte block header for complete self-contained verification
+        if (envelope.hasProof && envelope.blockHash) {
+          const blockHeader = await getBlockHeader(envelope.blockHash);
+          if (blockHeader) {
+            envelope.blockHeader = blockHeader;
+            console.log(`Got block header for ${txid}`);
+          }
+        }
+      }
+      
+      // If still no proof, check confirmations
+      if (!envelope.hasProof) {
+        if (txInfo?.confirmations > 0) {
+          envelope.hasProof = false;
+          envelope.note = `Confirmed (${txInfo.confirmations} confirmations) but Merkle proof not available from API`;
+        } else {
+          envelope.hasProof = false;
+          envelope.note = 'Unconfirmed - no Merkle proof yet';
+        }
+      }
+
+      // Add archive metadata
+      envelope.archivedAt = new Date().toISOString();
+      
+      // Generate checksum of core proof data (excluding the checksum itself)
+      const proofData = {
+        txid: envelope.txid,
+        vout: envelope.vout,
+        rawTx: envelope.rawTx,
+        proof: envelope.proof,
+        blockHeader: envelope.blockHeader,
+        blockHash: envelope.blockHash
+      };
+      envelope.checksum = await generateChecksum(proofData);
+
+      return envelope;
+    }
+
+    // Process a single address
+    async function processAddress(address, onProgress) {
+      const utxos = await getAddressUtxos(address);
+      const results = [];
+
+      for (let i = 0; i < utxos.length; i++) {
+        const utxo = utxos[i];
+        try {
+          const envelope = await generateEnvelope(utxo.tx_hash, utxo.tx_pos);
+          envelope.address = address;
+          results.push(envelope);
+        } catch (err) {
+          results.push({
+            txid: utxo.tx_hash,
+            vout: utxo.tx_pos,
+            address,
+            error: err.message
+          });
+        }
+
+        if (onProgress) {
+          onProgress(i + 1, utxos.length);
+        }
+
+        // Rate limiting
+        if (i < utxos.length - 1) {
+          await new Promise(r => setTimeout(r, 150));
+        }
+      }
+
+      return results;
+    }
+
+    // Main generate function
+    async function generate() {
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<div class="spinner"></div> Processing...';
+      resultSection.classList.remove('visible');
+      progressSection.classList.add('visible');
+      progressFill.style.width = '0%';
+
+      try {
+        let results = [];
+
+        if (currentTab === 'address') {
+          const address = document.getElementById('address').value.trim();
+          if (!address) throw new Error('Please enter an address');
+
+          progressText.textContent = 'Fetching UTXOs...';
+          results = await processAddress(address, (current, total) => {
+            progressFill.style.width = `${(current / total) * 100}%`;
+            progressText.textContent = `Processing UTXO ${current} of ${total}...`;
+          });
+
+        } else if (currentTab === 'txid') {
+          const txid = document.getElementById('txid').value.trim();
+          if (!txid) throw new Error('Please enter a TXID');
+          if (!/^[a-fA-F0-9]{64}$/.test(txid)) throw new Error('Invalid TXID format');
+
+          progressText.textContent = 'Fetching transaction...';
+          progressFill.style.width = '50%';
+          
+          const txInfo = await getTxDetails(txid);
+          // Generate envelope for each output
+          for (let i = 0; i < (txInfo?.vout?.length || 1); i++) {
+            const envelope = await generateEnvelope(txid, i);
+            results.push(envelope);
+          }
+          progressFill.style.width = '100%';
+
+        } else if (currentTab === 'bulk') {
+          const addresses = document.getElementById('bulk-addresses').value
+            .split('\n')
+            .map(a => a.trim())
+            .filter(a => a.length > 0);
+
+          if (addresses.length === 0) throw new Error('Please enter at least one address');
+
+          for (let i = 0; i < addresses.length; i++) {
+            progressText.textContent = `Processing address ${i + 1} of ${addresses.length}...`;
+            progressFill.style.width = `${(i / addresses.length) * 100}%`;
+
+            try {
+              const addressResults = await processAddress(addresses[i]);
+              results.push(...addressResults);
+            } catch (err) {
+              results.push({
+                address: addresses[i],
+                error: err.message
+              });
+            }
+
+            if (i < addresses.length - 1) {
+              await new Promise(r => setTimeout(r, 300));
+            }
+          }
+          progressFill.style.width = '100%';
+        }
+
+        allResults = results;
+        displayResults(results);
+
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+
+      progressSection.classList.remove('visible');
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = 'Generate SPV Envelopes';
+    }
+
+    // Display results
+    function displayResults(results) {
+      const totalUtxos = results.filter(r => !r.error).length;
+      const totalBalance = results.reduce((sum, r) => sum + (r.value || 0), 0);
+      const withProofs = results.filter(r => r.hasProof).length;
+
+      document.getElementById('stat-utxos').textContent = totalUtxos;
+      document.getElementById('stat-balance').textContent = totalBalance.toFixed(8);
+      document.getElementById('stat-proofs').textContent = withProofs;
+
+      utxoList.innerHTML = results.map((r, idx) => {
+        if (r.error) {
+          return `
+            <div class="utxo-item" style="opacity: 0.6;">
+              <div class="utxo-header">
+                <span class="utxo-txid">${r.txid || r.address || 'Unknown'}</span>
+                <span class="utxo-status" style="background: rgba(239,68,68,0.15); color: var(--error);">Error</span>
+              </div>
+              <div class="utxo-meta">${r.error}</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="utxo-item" data-index="${idx}">
+            <div class="utxo-header">
+              <span class="utxo-txid">${r.txid.substring(0, 16)}...${r.txid.substring(48)}:${r.vout}</span>
+              <span class="utxo-amount">${(r.value || 0).toFixed(8)} BSV</span>
+            </div>
+            <div class="utxo-meta">
+              ${r.address ? `<span>📍 ${r.address.substring(0, 12)}...</span>` : ''}
+              ${r.blockHeight ? `<span>Block ${r.blockHeight}</span>` : ''}
+              <span class="utxo-status ${r.hasProof ? 'confirmed' : 'unconfirmed'}">
+                ${r.hasProof ? '✓ Proof Ready' : '⏳ Unconfirmed'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Click handlers for viewing individual envelopes
+      utxoList.querySelectorAll('.utxo-item[data-index]').forEach(item => {
+        item.addEventListener('click', () => {
+          const idx = parseInt(item.dataset.index);
+          showEnvelopeModal(results[idx]);
+        });
+      });
+
+      resultSection.classList.add('visible');
+    }
+
+    // Show individual envelope in modal
+    function showEnvelopeModal(envelope) {
+      modalJson.innerHTML = highlightJson(envelope);
+      modal.classList.add('visible');
+    }
+
+    // JSON syntax highlighting
+    function highlightJson(obj, indent = 0) {
+      const spaces = '  '.repeat(indent);
+      
+      if (obj === null) return '<span class="number">null</span>';
+      if (typeof obj === 'boolean') return `<span class="number">${obj}</span>`;
+      if (typeof obj === 'number') return `<span class="number">${obj}</span>`;
+      if (typeof obj === 'string') {
+        const escaped = obj.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (escaped.length > 80) {
+          return `<span class="string">"${escaped.substring(0, 80)}..."</span>`;
+        }
+        return `<span class="string">"${escaped}"</span>`;
+      }
+      
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        const items = obj.map(item => `${spaces}  ${highlightJson(item, indent + 1)}`).join(',\n');
+        return `[\n${items}\n${spaces}]`;
+      }
+      
+      if (typeof obj === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return '{}';
+        const items = keys.map(key => {
+          const escapedKey = key.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `${spaces}  <span class="key">"${escapedKey}"</span>: ${highlightJson(obj[key], indent + 1)}`;
+        }).join(',\n');
+        return `{\n${items}\n${spaces}}`;
+      }
+      
+      return String(obj);
+    }
+
+    // Copy all results
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      if (allResults) {
+        navigator.clipboard.writeText(JSON.stringify(allResults, null, 2));
+        document.getElementById('copy-btn').textContent = 'Copied!';
+        setTimeout(() => document.getElementById('copy-btn').textContent = 'Copy All', 2000);
+      }
+    });
+
+    // Download results
+    document.getElementById('download-btn').addEventListener('click', () => {
+      if (allResults) {
+        const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().split('T')[0];
+        
+        // Get address(es) for filename
+        let filePrefix = 'spv-envelopes';
+        if (allResults.length > 0 && allResults[0].address) {
+          const addr = allResults[0].address;
+          // Use first and last 6 chars of address
+          filePrefix = `spv-${addr.substring(0, 6)}...${addr.substring(addr.length - 6)}`;
+        } else if (currentTab === 'address') {
+          const addr = document.getElementById('address').value.trim();
+          if (addr) {
+            filePrefix = `spv-${addr.substring(0, 6)}...${addr.substring(addr.length - 6)}`;
+          }
+        } else if (currentTab === 'txid') {
+          const txid = document.getElementById('txid').value.trim();
+          if (txid) {
+            filePrefix = `spv-tx-${txid.substring(0, 8)}`;
+          }
+        } else if (currentTab === 'bulk') {
+          filePrefix = `spv-bulk-${allResults.length}-addresses`;
+        }
+        
+        a.download = `${filePrefix}-${timestamp}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    // Generate button
+    generateBtn.addEventListener('click', generate);
+
+    // Enter key handlers
+    document.getElementById('address').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') generate();
+    });
+    document.getElementById('txid').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') generate();
+    });
+  </script>
+</body>
+</html>

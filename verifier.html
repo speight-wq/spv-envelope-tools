@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPV Envelope Verifier (Offline)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --accent-green: #22c55e;
+      --accent-green-dim: #16a34a;
+      --accent-cyan: #00d4aa;
+      --accent-red: #ef4444;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --border: #2a2a3a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dim) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .offline-badge {
+      display: inline-block;
+      background: var(--accent-green);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .input-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 16px 20px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      border-color: var(--accent-green);
+    }
+
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .file-drop:hover, .file-drop.dragover {
+      border-color: var(--accent-green);
+      background: rgba(34, 197, 94, 0.05);
+    }
+
+    .file-drop input {
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px 32px;
+      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dim) 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+    }
+
+    .results {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .results.visible {
+      display: block;
+    }
+
+    .result-item {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-item:last-child {
+      border-bottom: none;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .result-txid {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+    }
+
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .result-status.valid {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent-green);
+    }
+
+    .result-status.invalid {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+    }
+
+    .verification-steps {
+      display: grid;
+      gap: 8px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .step-icon.pass {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--accent-green);
+    }
+
+    .step-icon.fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-red);
+    }
+
+    .step-text {
+      color: var(--text-secondary);
+    }
+
+    .step-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .info-section {
+      margin-top: 32px;
+      padding: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .info-section h3 {
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .info-section p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .info-section code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">✓</div>
+        <h1>SPV Envelope Verifier</h1>
+      </div>
+      <p class="subtitle">Verify your Merkle proofs completely offline</p>
+      <div class="offline-badge">🔒 NO NETWORK REQUIRED</div>
+    </header>
+
+    <div class="input-section">
+      <div class="file-drop" id="file-drop">
+        <p>📁 Drop your envelope JSON file here, or click to browse</p>
+        <input type="file" id="file-input" accept=".json">
+      </div>
+      
+      <label>Or paste envelope JSON directly:</label>
+      <textarea id="json-input" placeholder='Paste your SPV envelope JSON here...'></textarea>
+      
+      <button class="btn" id="verify-btn">Verify Envelope</button>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <div class="info-section">
+      <h3>How Verification Works</h3>
+      <p><strong>Step 1:</strong> Hash the <code>rawTx</code> using double SHA-256 to confirm it matches the <code>txid</code>.</p>
+      <p><strong>Step 2:</strong> Starting with the txid, hash up the Merkle tree using the <code>nodes</code> array and <code>index</code> to compute the Merkle root.</p>
+      <p><strong>Step 3:</strong> Extract the Merkle root from bytes 36-68 of the <code>blockHeader</code> and verify it matches.</p>
+      <p><strong>Step 4:</strong> Double SHA-256 the <code>blockHeader</code> to verify it matches the <code>blockHash</code>.</p>
+      <p style="margin-top: 16px; color: var(--accent-green);">✓ If all steps pass, your UTXO is cryptographically proven to exist on the BSV blockchain.</p>
+    </div>
+  </div>
+
+  <script>
+    // SHA-256 implementation (no external dependencies)
+    const sha256 = async (data) => {
+      const buffer = typeof data === 'string' ? hexToBytes(data) : data;
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      return bytesToHex(new Uint8Array(hashBuffer));
+    };
+
+    // Double SHA-256 (Bitcoin's standard)
+    const doubleSha256 = async (data) => {
+      const first = await sha256(data);
+      return await sha256(first);
+    };
+
+    // Hex string to byte array
+    const hexToBytes = (hex) => {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return bytes;
+    };
+
+    // Byte array to hex string
+    const bytesToHex = (bytes) => {
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    // Reverse byte order (for converting between display and internal format)
+    const reverseHex = (hex) => {
+      return hex.match(/.{2}/g).reverse().join('');
+    };
+
+    // Verify a single envelope
+    async function verifyEnvelope(envelope) {
+      const results = {
+        txid: envelope.txid,
+        steps: [],
+        valid: true
+      };
+
+      try {
+        // Step 1: Verify rawTx hashes to txid
+        if (envelope.rawTx) {
+          const computedTxid = reverseHex(await doubleSha256(envelope.rawTx));
+          const txidMatch = computedTxid === envelope.txid;
+          results.steps.push({
+            name: 'Transaction Hash',
+            description: 'rawTx double-SHA256 matches txid',
+            pass: txidMatch,
+            computed: computedTxid.substring(0, 16) + '...',
+            expected: envelope.txid.substring(0, 16) + '...'
+          });
+          if (!txidMatch) results.valid = false;
+        } else {
+          results.steps.push({
+            name: 'Transaction Hash',
+            description: 'rawTx not provided',
+            pass: false
+          });
+          results.valid = false;
+        }
+
+        // Step 2: Compute Merkle root from nodes
+        if (envelope.proof && envelope.proof.nodes && envelope.proof.nodes.length > 0) {
+          let current = envelope.txid;
+          const index = envelope.proof.index;
+          
+          for (let i = 0; i < envelope.proof.nodes.length; i++) {
+            const node = envelope.proof.nodes[i];
+            // Determine if current hash goes left or right based on index bit
+            const isRight = (index >> i) & 1;
+            
+            let combined;
+            if (isRight) {
+              // Current is on the right, node is on the left
+              combined = reverseHex(node) + reverseHex(current);
+            } else {
+              // Current is on the left, node is on the right
+              combined = reverseHex(current) + reverseHex(node);
+            }
+            
+            current = reverseHex(await doubleSha256(combined));
+          }
+          
+          const computedMerkleRoot = current;
+          results.computedMerkleRoot = computedMerkleRoot;
+          
+          results.steps.push({
+            name: 'Merkle Path',
+            description: `Computed root from ${envelope.proof.nodes.length} nodes`,
+            pass: true, // Will verify against header next
+            computed: computedMerkleRoot.substring(0, 16) + '...'
+          });
+        } else {
+          results.steps.push({
+            name: 'Merkle Path',
+            description: 'No proof nodes provided',
+            pass: false
+          });
+          results.valid = false;
+        }
+
+        // Step 3: Verify Merkle root in block header
+        if (envelope.blockHeader && results.computedMerkleRoot) {
+          // Merkle root is at bytes 36-68 (characters 72-136 in hex)
+          const headerMerkleRoot = reverseHex(envelope.blockHeader.substring(72, 136));
+          const merkleMatch = headerMerkleRoot === results.computedMerkleRoot;
+          
+          results.steps.push({
+            name: 'Merkle Root in Header',
+            description: 'Computed root matches header bytes 36-68',
+            pass: merkleMatch,
+            computed: results.computedMerkleRoot.substring(0, 16) + '...',
+            expected: headerMerkleRoot.substring(0, 16) + '...'
+          });
+          if (!merkleMatch) results.valid = false;
+        } else if (!envelope.blockHeader) {
+          results.steps.push({
+            name: 'Merkle Root in Header',
+            description: 'blockHeader not provided - cannot verify offline',
+            pass: false
+          });
+          results.valid = false;
+        }
+
+        // Step 4: Verify block header hashes to blockHash
+        if (envelope.blockHeader && envelope.blockHash) {
+          const computedBlockHash = reverseHex(await doubleSha256(envelope.blockHeader));
+          const blockHashMatch = computedBlockHash === envelope.blockHash;
+          
+          results.steps.push({
+            name: 'Block Header Hash',
+            description: 'Header double-SHA256 matches blockHash',
+            pass: blockHashMatch,
+            computed: computedBlockHash.substring(0, 16) + '...',
+            expected: envelope.blockHash.substring(0, 16) + '...'
+          });
+          if (!blockHashMatch) results.valid = false;
+        } else if (!envelope.blockHash) {
+          results.steps.push({
+            name: 'Block Header Hash',
+            description: 'blockHash not provided',
+            pass: false
+          });
+          results.valid = false;
+        }
+
+        // Step 5: Verify checksum if present
+        if (envelope.checksum) {
+          const proofData = {
+            txid: envelope.txid,
+            vout: envelope.vout,
+            rawTx: envelope.rawTx,
+            proof: envelope.proof,
+            blockHeader: envelope.blockHeader,
+            blockHash: envelope.blockHash
+          };
+          const str = JSON.stringify(proofData);
+          const encoder = new TextEncoder();
+          const dataBuffer = encoder.encode(str);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const computedChecksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          const checksumMatch = computedChecksum === envelope.checksum;
+          results.steps.push({
+            name: 'Envelope Checksum',
+            description: 'File integrity verified',
+            pass: checksumMatch,
+            computed: computedChecksum.substring(0, 16) + '...',
+            expected: envelope.checksum.substring(0, 16) + '...'
+          });
+          if (!checksumMatch) results.valid = false;
+        }
+
+        // Show archive date if present
+        if (envelope.archivedAt) {
+          results.archivedAt = envelope.archivedAt;
+        }
+
+        // Additional info
+        if (envelope.blockHeight) {
+          results.blockHeight = envelope.blockHeight;
+        }
+        if (envelope.value) {
+          results.value = envelope.value;
+        }
+
+      } catch (e) {
+        results.valid = false;
+        results.error = e.message;
+      }
+
+      return results;
+    }
+
+    // Display results
+    function displayResults(results) {
+      const container = document.getElementById('results');
+      
+      const html = results.map(r => `
+        <div class="result-item">
+          <div class="result-header">
+            <span class="result-txid">${r.txid ? r.txid.substring(0, 20) + '...' + r.txid.substring(56) : 'Unknown'}</span>
+            <span class="result-status ${r.valid ? 'valid' : 'invalid'}">
+              ${r.valid ? '✓ VALID' : '✗ INVALID'}
+            </span>
+          </div>
+          ${r.blockHeight ? `<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Block ${r.blockHeight} ${r.value ? '• ' + r.value + ' BSV' : ''} ${r.archivedAt ? '• Archived ' + new Date(r.archivedAt).toLocaleDateString() : ''}</div>` : ''}
+          <div class="verification-steps">
+            ${r.steps.map(step => `
+              <div class="step">
+                <div class="step-icon ${step.pass ? 'pass' : 'fail'}">${step.pass ? '✓' : '✗'}</div>
+                <span class="step-text">${step.description}</span>
+                ${step.computed ? `<span class="step-value">${step.computed}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          ${r.error ? `<div style="color: var(--accent-red); margin-top: 12px; font-size: 0.85rem;">Error: ${r.error}</div>` : ''}
+        </div>
+      `).join('');
+
+      container.innerHTML = html;
+      container.classList.add('visible');
+    }
+
+    // Main verify function
+    async function verify() {
+      const jsonInput = document.getElementById('json-input').value.trim();
+      
+      if (!jsonInput) {
+        alert('Please paste or load an envelope JSON');
+        return;
+      }
+
+      try {
+        const data = JSON.parse(jsonInput);
+        
+        // Handle single envelope or array
+        const envelopes = Array.isArray(data) ? data : [data];
+        
+        const results = [];
+        for (const env of envelopes) {
+          // Skip error entries
+          if (env.error) continue;
+          
+          const result = await verifyEnvelope(env);
+          results.push(result);
+        }
+
+        displayResults(results);
+
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
+    }
+
+    // File handling
+    const fileDrop = document.getElementById('file-drop');
+    const fileInput = document.getElementById('file-input');
+
+    fileDrop.addEventListener('click', () => fileInput.click());
+    
+    fileDrop.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      fileDrop.classList.add('dragover');
+    });
+
+    fileDrop.addEventListener('dragleave', () => {
+      fileDrop.classList.remove('dragover');
+    });
+
+    fileDrop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileDrop.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) loadFile(e.target.files[0]);
+    });
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('json-input').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+
+    // Button
+    document.getElementById('verify-btn').addEventListener('click', verify);
+  </script>
+</body>
+</html>

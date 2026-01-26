@@ -1,0 +1,32 @@
+{
+  "name": "spv-envelope-tools",
+  "version": "1.0.0",
+  "description": "Generate and verify SPV envelopes for BSV transactions",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "BSV",
+    "Bitcoin",
+    "SPV",
+    "Merkle",
+    "envelope",
+    "proof",
+    "UTXO",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "Open BSV License",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "homepage": "",
+  "bugs": {
+    "url": ""
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
