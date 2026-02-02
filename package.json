@@ -1,32 +1,39 @@
 {
   "name": "spv-envelope-tools",
   "version": "1.0.0",
-  "description": "Generate and verify SPV envelopes for BSV transactions",
-  "main": "src/index.js",
+  "description": "Generate and verify SPV envelopes for BSV transactions. Prove your UTXOs exist on-chain.",
+  "main": "spv.js",
+  "browser": "spv.js",
+  "bin": {
+    "spv-envelope-tools": "./cli.js"
+  },
+  "files": [
+    "spv.js",
+    "cli.js",
+    "generator.html",
+    "verifier.html"
+  ],
   "scripts": {
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/speight-wq/spv-envelope-tools.git"
   },
   "keywords": [
-    "BSV",
-    "Bitcoin",
-    "SPV",
-    "Merkle",
-    "envelope",
+    "bitcoin",
+    "bsv",
+    "spv",
+    "merkle",
     "proof",
-    "UTXO",
-    "blockchain"
+    "envelope",
+    "verification",
+    "utxo"
   ],
   "author": "",
   "license": "Open BSV License",
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "homepage": "",
   "bugs": {
-    "url": ""
+    "url": "https://github.com/speight-wq/spv-envelope-tools/issues"
   },
-  "engines": {
-    "node": ">=14.0.0"
-  }
+  "homepage": "https://github.com/speight-wq/spv-envelope-tools#readme"
 }
