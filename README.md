@@ -176,7 +176,7 @@ Issues and PRs welcome. If you'd like to add features:
 4. Submit a pull request
 
 **Potential enhancements:**
-- Node.js CLI version
+- Node.js CLI version | ✓ | Done
 - npm package
 - Chain of headers for orphan detection
 - Integration with popular BSV wallets
