@@ -136,7 +136,7 @@ This tool uses the [WhatsOnChain API](https://whatsonchain.com) for data retriev
 | Offline verifier | ✗ | ✓ |
 | Archive timestamp | ✗ | ✓ |
 | Integrity checksum | ✗ | ✓ |
-| Node.js library | ✓ | Planned |
+| Node.js library | ✓ | ✓ |
 
 ## Use Cases
 
