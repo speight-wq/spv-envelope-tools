@@ -27,6 +27,28 @@ An SPV envelope contains everything needed to cryptographically verify a transac
 | **Archive Timestamp** | Records when the envelope was generated |
 | **Integrity Checksum** | SHA256 checksum to detect file corruption |
 
+## Security
+
+All tools prioritize security and work completely offline:
+
+- **No Network Calls** - Generator is the only tool requiring internet (to fetch blockchain data). Verifier and Signer work 100% offline
+- **RFC 6979 Signatures** - Deterministic ECDSA prevents nonce reuse vulnerabilities
+- **Signature Verification** - Every signature is cryptographically verified before output
+- **Memory Wiping** - Private keys cleared immediately after signing
+- **Self-Testing** - Cryptographic functions validated on page load
+- **No External Dependencies** - Pure JavaScript, no CDN imports
+- **Open Source** - All code visible and auditable
+- **Browser-Based** - No installation, no binaries, no trust in external executables
+
+**Recommended Workflow for Maximum Security:**
+1. Download all three HTML files to a USB drive
+2. Use an air-gapped computer (never connected to internet)
+3. Generate envelopes on an online machine
+4. Transfer envelope JSON via USB to air-gapped machine
+5. Sign transactions offline
+6. Transfer signed transaction hex back via USB
+7. Broadcast from online machine
+
 ## Tools Included
 
 ### 1. SPV Envelope Generator (`generator.html`)
@@ -62,6 +84,46 @@ Verify SPV envelopes with absolutely no network connection required.
 3. Drag & drop your envelope JSON or paste it
 4. Click "Verify Envelope"
 5. All green = cryptographically proven on-chain
+
+### 3. Offline Transaction Signer (`signer.html`)
+
+Sign BSV transactions completely offline using your SPV envelopes. Maximum security for cold storage.
+
+**Security Features:**
+- **RFC 6979 Deterministic Signatures** - No random number generation vulnerabilities
+- **Signature Verification** - Every signature is verified before output
+- **Key Cleared After Signing** - Private key wiped from memory immediately
+- **Self-Test on Load** - Cryptographic functions validated before use
+- **Completely Offline** - All operations local, no network calls
+- **No External Dependencies** - Pure JavaScript implementation
+
+**Workflow:**
+1. **Online:** Generate SPV envelope for your UTXO
+2. **Offline:** Open `signer.html`, disconnect from internet
+3. Load your envelope JSON
+4. Enter private key (WIF format)
+5. Set destination address and amount
+6. Sign transaction (key is immediately cleared)
+7. Save the signed transaction hex
+8. **Back Online:** Broadcast via WhatsOnChain or other service
+
+**Usage:**
+1. Open `signer.html` in any browser
+2. Disconnect from internet for maximum security
+3. Paste your SPV envelope
+4. Enter private key (shown as password)
+5. Specify destination and amount
+6. Click "Sign Transaction"
+7. Copy or download the signed transaction
+8. Broadcast when back online
+
+**What Gets Signed:**
+The signer creates a standard P2PKH transaction spending your envelope UTXO. It automatically:
+- Calculates transaction size and fees
+- Creates proper scriptSig with signature + public key
+- Generates deterministic signature using RFC 6979
+- Verifies signature before presenting output
+- Clears private key from memory
 
 ## Envelope Format
 
@@ -134,6 +196,8 @@ This tool uses the [WhatsOnChain API](https://whatsonchain.com) for data retriev
 | TSC format fallback | ✗ | ✓ |
 | 80-byte block header | ✗ | ✓ |
 | Offline verifier | ✗ | ✓ |
+| Offline transaction signer | ✗ | ✓ |
+| RFC 6979 signatures | ✗ | ✓ |
 | Archive timestamp | ✗ | ✓ |
 | Integrity checksum | ✗ | ✓ |
 | Node.js library | ✓ | ✓ |
@@ -141,10 +205,12 @@ This tool uses the [WhatsOnChain API](https://whatsonchain.com) for data retriev
 ## Use Cases
 
 - **Cold Storage Backup** - Archive proofs for long-term holdings
+- **Offline Transaction Signing** - Spend from cold storage without exposing keys online
 - **Inscription Collections** - Prove ownership of NFTs/ordinals
 - **Business Records** - Maintain verifiable transaction receipts
 - **SPV Wallet Development** - Reference implementation for proof handling
 - **Disaster Recovery** - Ensure you can always prove UTXO existence
+- **Air-Gapped Security** - Sign transactions on isolated machines
 
 ## Browser Compatibility
 
@@ -177,10 +243,13 @@ Issues and PRs welcome. If you'd like to add features:
 
 **Potential enhancements:**
 - Node.js CLI version | ✓ | Done
+- Offline transaction signer | ✓ | Done
 - npm package
+- Multi-signature support
 - Chain of headers for orphan detection
 - Integration with popular BSV wallets
 - Batch export in different formats
+- Hardware wallet integration
 
 ---
 
