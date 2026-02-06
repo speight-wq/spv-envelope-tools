@@ -2,21 +2,34 @@
 
 Offline BSV transaction tools. No server, no dependencies — runs entirely in your browser.
 
+---
+
 ## Tools
 
 ### Generator `generator.html`
-Generate SPV envelopes for any confirmed BSV transaction.
 
-**Input:** Transaction ID  
+Generate SPV envelopes for confirmed BSV transactions.
+
+**Modes:**
+- **By TXID** — Single transaction lookup
+- **By Address** — All UTXOs for an address
+- **Bulk Addresses** — Multiple addresses at once
+
 **Output:** Raw transaction, merkle proof, block header, block height
 
+---
+
 ### Verifier `verifier.html`
+
 Verify SPV envelopes completely offline.
 
 **Input:** SPV envelope JSON  
 **Output:** Transaction validity, merkle proof verification, block header validation
 
+---
+
 ### Signer `signer.html`
+
 Sign BSV transactions offline using SPV envelopes as proof of funds.
 
 **Input:** SPV envelope, private key (WIF), destination address, amount  
@@ -26,12 +39,16 @@ Sign BSV transactions offline using SPV envelopes as proof of funds.
 
 ## Security Features
 
-- **RFC 6979** — Deterministic signatures, cryptographically secure
-- **Transaction preview** — Confirm exact details before signing
-- **Network detection** — Warns if device is connected to internet
-- **Code integrity hash** — Verify you're running authentic code
-- **Key cleared** — Private key wiped from memory after signing
-- **Self-test on load** — Crypto functions verified before use
+| Feature | Description |
+|---------|-------------|
+| **RFC 6979** | Deterministic signatures, cryptographically secure |
+| **Transaction preview** | Confirm exact details before signing |
+| **Network detection** | Warns if device is connected to internet |
+| **Code integrity hash** | Verify you're running authentic code |
+| **QR code output** | Broadcast via phone camera, no clipboard |
+| **Key clearing** | Private key wiped from memory after signing |
+| **Self-test on load** | Crypto functions verified before use |
+| **Signature verification** | Verifies signature before output |
 
 ---
 
@@ -51,11 +68,11 @@ Compare with the hash displayed in the page footer. Click the footer hash to cop
 ## Workflow
 
 ```
-ONLINE     Generate SPV envelope for your UTXO
+ONLINE     Generate SPV envelope (by TXID, address, or bulk)
               ↓
 OFFLINE    Verify envelope (optional) → Sign transaction
               ↓
-ONLINE     Broadcast at whatsonchain.com/broadcast
+ONLINE     Broadcast via QR scan or whatsonchain.com/broadcast
 ```
 
 ---
@@ -63,9 +80,10 @@ ONLINE     Broadcast at whatsonchain.com/broadcast
 ## Use Cases
 
 - **Cold storage** — Sign on an air-gapped machine
-- **Disaster prep** — Spend coins when internet is intermittent  
+- **Disaster prep** — Spend coins when internet is intermittent
 - **Compliance** — Cryptographic proof of UTXO ownership
 - **Audit trails** — Verifiable transaction history
+- **Bulk operations** — Generate envelopes for multiple addresses
 
 ---
 
@@ -118,12 +136,27 @@ node cli.js address <address>
 
 ---
 
+## Limitations
+
+- Single UTXO per transaction (no coin selection)
+- P2PKH addresses only (no P2SH/multisig)
+- Mainnet only
+
+---
+
 ## Security Best Practices
 
 1. Verify the integrity hash before entering private keys
 2. Disconnect from internet before signing
-3. Close browser tab after use
-4. Test with small amounts first
+3. Use QR code output to avoid clipboard
+4. Close browser tab after use
+5. Test with small amounts first
+
+---
+
+## Audit Status
+
+This code has not been independently audited. Review the source before use with significant funds.
 
 ---
 
