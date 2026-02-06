@@ -43,8 +43,39 @@
     .next-steps ol { margin-left: 20px; color: var(--text-2); }
     .next-steps li { margin-bottom: 8px; }
     .next-steps a { color: var(--accent); }
-    .hidden { display: none; }
+    .hidden { display: none !important; }
     .divider { height: 1px; background: var(--border); margin: 16px 0; }
+    .quote { background: var(--surface); border-left: 4px solid var(--accent); padding: 16px 20px; margin: 32px 0; font-style: italic; color: var(--text-2); font-size: 0.9rem; }
+    .quote-author { font-style: normal; font-weight: 600; color: var(--text); margin-top: 8px; display: block; }
+    .confirm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .confirm-box { background: var(--bg); border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+    .confirm-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; }
+    .confirm-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .confirm-row:last-of-type { border-bottom: none; }
+    .confirm-label { color: var(--text-3); }
+    .confirm-value { font-family: monospace; font-weight: 500; text-align: right; max-width: 55%; word-break: break-all; }
+    .confirm-value.address { font-size: 0.75rem; }
+    .confirm-buttons { display: flex; gap: 12px; margin-top: 20px; }
+    .confirm-buttons .btn { flex: 1; }
+    .network-warning { background: var(--bg); border-radius: 12px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+    .network-warning-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .network-warning-title { font-size: 1.2rem; font-weight: 600; color: var(--danger); margin-bottom: 12px; }
+    .network-warning-text { color: var(--text-2); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.6; }
+    .network-warning-buttons { display: flex; gap: 12px; }
+    .network-warning-buttons .btn { flex: 1; }
+    .btn-danger { background: var(--danger); color: white; }
+    .status-bar { background: var(--success-bg); border: 1px solid var(--success); color: var(--success); padding: 8px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 0.875rem; display: flex; align-items: center; gap: 8px; }
+    .status-bar.offline { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+    .status-bar.online { background: #ffe3e3; border-color: var(--danger); color: var(--danger); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-bar.offline .status-dot { background: var(--success); }
+    .status-bar.online .status-dot { background: var(--danger); }
+    .integrity-display { margin-top: 8px; padding: 8px 12px; background: var(--surface); border-radius: 4px; font-size: 0.75rem; }
+    .integrity-label { color: var(--text-3); }
+    .integrity-display code { color: var(--text); font-family: monospace; margin-left: 4px; user-select: all; }
+    .integrity-status { margin-left: 8px; }
+    .integrity-status.verified { color: var(--success); }
+    .integrity-status.computing { color: var(--text-3); }
     footer { text-align: center; color: var(--text-3); font-size: 0.8rem; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
     footer a { color: var(--accent); text-decoration: none; }
   </style>
@@ -52,6 +83,11 @@
 <body>
   <h1>Offline Transaction Signer</h1>
   <p class="subtitle">Sign BSV transactions without internet. Uses envelopes from the <a href="generator.html">SPV Envelope Generator</a>.</p>
+
+  <div id="network-status" class="status-bar offline">
+    <span class="status-dot"></span>
+    <span id="network-status-text">Checking network status...</span>
+  </div>
 
   <div class="notice">
     <div class="notice-title">Security Notice</div>
@@ -136,11 +172,51 @@
     <div id="tx-error" class="error-box hidden"></div>
   </div>
 
+  <div class="quote">
+    "A user only needs to keep a copy of the block headers of the longest proof-of-work chain... and obtain the Merkle branch linking the transaction to the block it's timestamped in. He can't check the transaction for himself, but by linking it to a place in the chain, he can see that a network node has accepted it."
+    <span class="quote-author">— Satoshi Nakamoto, Bitcoin Whitepaper (2008)</span>
+  </div>
+
   <footer>
     <a href="https://github.com/speight-wq/spv-envelope-tools">SPV Envelope Tools</a><br>
     <a href="generator.html">Generator</a> · <a href="verifier.html">Verifier</a> · Signer<br><br>
-    All code runs locally. Your keys never leave this page.
+    All code runs locally. Your keys never leave this page.<br><br>
+    <div id="integrity-hash" class="integrity-display">
+      <span class="integrity-label">Page Integrity SHA-256:</span>
+      <code id="integrity-value">Computing...</code>
+      <span id="integrity-status"></span>
+    </div>
   </footer>
+
+  <div id="confirm-modal" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <div class="confirm-title">Confirm Transaction</div>
+      <div class="confirm-row"><span class="confirm-label">From</span><span class="confirm-value address" id="confirm-from"></span></div>
+      <div class="confirm-row"><span class="confirm-label">To</span><span class="confirm-value address" id="confirm-to"></span></div>
+      <div class="confirm-row"><span class="confirm-label">Amount</span><span class="confirm-value" id="confirm-amount"></span></div>
+      <div class="confirm-row"><span class="confirm-label">Fee</span><span class="confirm-value" id="confirm-fee"></span></div>
+      <div class="confirm-row"><span class="confirm-label">Change</span><span class="confirm-value" id="confirm-change"></span></div>
+      <div class="confirm-buttons">
+        <button class="btn btn-secondary" onclick="cancelSign()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmSign()">Sign</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="network-modal" class="confirm-overlay hidden">
+    <div class="network-warning">
+      <div class="network-warning-icon">⚠️</div>
+      <div class="network-warning-title">Network Connection Detected</div>
+      <div class="network-warning-text">
+        Your device appears to be connected to the internet.<br><br>
+        For maximum security, disconnect from WiFi and mobile data before entering your private key. This ensures your key cannot be transmitted.
+      </div>
+      <div class="network-warning-buttons">
+        <button class="btn btn-secondary" onclick="dismissNetworkWarning()">Continue Anyway</button>
+        <button class="btn btn-primary" onclick="checkNetworkAgain()">I've Disconnected</button>
+      </div>
+    </div>
+  </div>
 
   <script>
   (function() {
@@ -948,6 +1024,9 @@
       }
     };
 
+    // Pending transaction data for confirmation
+    let pendingTx = null;
+
     window.signTransaction = function() {
       const resultDiv = document.getElementById('tx-result');
       const errorDiv = document.getElementById('tx-error');
@@ -1004,8 +1083,56 @@
           throw new Error('Insufficient funds. Have ' + currentEnvelope.sats + ' sats, need ' + (amountSats + feeSats) + ' sats');
         }
         
+        // Calculate change
+        const changeSats = currentEnvelope.sats - amountSats - feeSats;
+        
+        // Get source address
+        const publicKey = SECP256K1.getPublicKey(currentKey.privateKey, currentKey.compressed);
+        const sourceAddress = publicKeyToAddress(publicKey);
+        
+        // Store pending transaction details
+        pendingTx = {
+          envelope: currentEnvelope,
+          key: currentKey,
+          destAddress: destAddress,
+          amountSats: amountSats,
+          feeSats: feeSats,
+          changeSats: changeSats,
+          sourceAddress: sourceAddress
+        };
+        
+        // Show confirmation modal
+        document.getElementById('confirm-from').textContent = sourceAddress;
+        document.getElementById('confirm-to').textContent = destAddress;
+        document.getElementById('confirm-amount').textContent = (amountSats / 100000000).toFixed(8) + ' BSV';
+        document.getElementById('confirm-fee').textContent = feeSats + ' sats';
+        document.getElementById('confirm-change').textContent = changeSats > 546 ? (changeSats / 100000000).toFixed(8) + ' BSV' : 'None (dust)';
+        document.getElementById('confirm-modal').classList.remove('hidden');
+        
+      } catch (e) {
+        errorDiv.textContent = e.message;
+        errorDiv.classList.remove('hidden');
+      }
+    };
+
+    window.cancelSign = function() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      pendingTx = null;
+    };
+
+    window.confirmSign = function() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      
+      const resultDiv = document.getElementById('tx-result');
+      const errorDiv = document.getElementById('tx-error');
+      
+      try {
+        if (!pendingTx) {
+          throw new Error('No pending transaction');
+        }
+        
         // Build and sign transaction
-        const result = buildTransaction(currentEnvelope, currentKey, destAddress, amountSats, feeSats);
+        const result = buildTransaction(pendingTx.envelope, pendingTx.key, pendingTx.destAddress, pendingTx.amountSats, pendingTx.feeSats);
         
         // Display results
         document.getElementById('result-txid').textContent = result.txid;
@@ -1018,6 +1145,7 @@
         
         // Security: Clear sensitive data
         currentKey = null;
+        pendingTx = null;
         document.getElementById('private-key').value = '';
         document.getElementById('key-info').classList.add('hidden');
         
@@ -1096,6 +1224,182 @@
         alert('WARNING: Cryptographic self-test failed. Do not use this page. Error: ' + e.message);
       }
     })();
+
+    // ==========================================
+    // Network Detection
+    // ==========================================
+    let networkWarningDismissed = false;
+
+    async function checkNetworkStatus() {
+      const statusBar = document.getElementById('network-status');
+      const statusText = document.getElementById('network-status-text');
+      const modal = document.getElementById('network-modal');
+      
+      // Method 1: navigator.onLine (quick but not always reliable)
+      const browserSaysOnline = navigator.onLine;
+      
+      // Method 2: Actually try to fetch something (more reliable)
+      let canReachNetwork = false;
+      
+      if (browserSaysOnline) {
+        try {
+          // Try to fetch a tiny resource with a short timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          
+          // Use a reliable, fast endpoint - just checking if we get any response
+          const response = await fetch('https://www.google.com/favicon.ico', {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-store',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          canReachNetwork = true;
+        } catch (e) {
+          // Fetch failed - likely offline
+          canReachNetwork = false;
+        }
+      }
+      
+      const isOnline = browserSaysOnline && canReachNetwork;
+      
+      if (isOnline) {
+        statusBar.className = 'status-bar online';
+        statusText.textContent = 'Network detected — disconnect for maximum security';
+        console.log('Network status: ONLINE (connected to internet)');
+        
+        // Show warning modal if not dismissed
+        if (!networkWarningDismissed) {
+          modal.classList.remove('hidden');
+        }
+      } else {
+        statusBar.className = 'status-bar offline';
+        statusText.textContent = 'Offline — secure signing environment';
+        console.log('Network status: OFFLINE (no internet connection)');
+        modal.classList.add('hidden');
+      }
+      
+      return isOnline;
+    }
+
+    window.dismissNetworkWarning = function() {
+      networkWarningDismissed = true;
+      document.getElementById('network-modal').classList.add('hidden');
+      console.log('Network warning dismissed by user');
+    };
+
+    window.checkNetworkAgain = async function() {
+      document.getElementById('network-modal').classList.add('hidden');
+      
+      // Brief delay to let network state update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const stillOnline = await checkNetworkStatus();
+      if (!stillOnline) {
+        console.log('Network disconnected successfully');
+      }
+    };
+
+    // Check network status on page load
+    checkNetworkStatus();
+
+    // Also monitor for network changes
+    window.addEventListener('online', () => {
+      console.log('Network event: came online');
+      checkNetworkStatus();
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('Network event: went offline');
+      checkNetworkStatus();
+    });
+
+    // ==========================================
+    // Page Integrity Hash Verification
+    // ==========================================
+    
+    async function computePageIntegrity() {
+      const valueEl = document.getElementById('integrity-value');
+      const statusEl = document.getElementById('integrity-status');
+      
+      try {
+        statusEl.textContent = '(computing...)';
+        statusEl.className = 'integrity-status computing';
+        
+        // Get the full page source as rendered
+        // Note: This may differ slightly from the original file due to browser parsing
+        // For exact verification, users should hash the downloaded file directly
+        let pageSource = document.documentElement.outerHTML;
+        
+        // Normalize only the dynamic elements that change between loads:
+        // 1. The hash display itself (circular dependency)
+        pageSource = pageSource.replace(
+          /<code id="integrity-value">[^<]*<\/code>/g,
+          '<code id="integrity-value">HASH_PLACEHOLDER</code>'
+        );
+        
+        // 2. The integrity status text
+        pageSource = pageSource.replace(
+          /<span id="integrity-status"[^>]*>[^<]*<\/span>/g,
+          '<span id="integrity-status"></span>'
+        );
+        
+        // 3. Network status (varies based on connection)
+        pageSource = pageSource.replace(
+          /<span id="network-status-text">[^<]*<\/span>/g,
+          '<span id="network-status-text">STATUS</span>'
+        );
+        
+        // 4. Network status bar class
+        pageSource = pageSource.replace(
+          /id="network-status" class="status-bar[^"]*"/g,
+          'id="network-status" class="status-bar normalized"'
+        );
+        
+        // Convert to bytes using UTF-8
+        const encoder = new TextEncoder();
+        const data = encoder.encode(pageSource);
+        
+        // Compute SHA-256 using our existing implementation
+        const hashBytes = SHA256.hash(data);
+        const hashHex = bytesToHex(hashBytes);
+        
+        // Display truncated hash
+        const displayHash = hashHex.slice(0, 16) + '...' + hashHex.slice(-8);
+        valueEl.textContent = displayHash;
+        valueEl.title = 'Full SHA-256: ' + hashHex + '\nClick to copy';
+        valueEl.style.cursor = 'pointer';
+        valueEl.onclick = function() {
+          navigator.clipboard.writeText(hashHex).then(() => {
+            statusEl.textContent = '(copied!)';
+            setTimeout(() => {
+              statusEl.textContent = '(verify on GitHub)';
+            }, 1500);
+          });
+        };
+        
+        statusEl.textContent = '(verify on GitHub)';
+        statusEl.className = 'integrity-status';
+        
+        console.log('Page integrity hash computed:', hashHex);
+        return hashHex;
+        
+      } catch (e) {
+        console.error('Failed to compute integrity hash:', e);
+        valueEl.textContent = 'Error';
+        statusEl.textContent = '';
+        return null;
+      }
+    }
+    
+    // Compute integrity hash after page fully loads
+    if (document.readyState === 'complete') {
+      computePageIntegrity();
+    } else {
+      window.addEventListener('load', computePageIntegrity);
+    }
 
   })();
   </script>
