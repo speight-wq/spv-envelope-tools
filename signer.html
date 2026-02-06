@@ -76,6 +76,15 @@
     .integrity-status { margin-left: 8px; }
     .integrity-status.verified { color: var(--success); }
     .integrity-status.computing { color: var(--text-3); }
+    .qr-container { background: var(--bg); border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,0.2); text-align: center; }
+    .qr-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+    .qr-subtitle { color: var(--text-3); font-size: 0.85rem; margin-bottom: 16px; }
+    .qr-container canvas { display: block; margin: 0 auto 16px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; }
+    .qr-info { font-size: 0.75rem; color: var(--text-3); margin-bottom: 16px; }
+    .qr-buttons { display: flex; gap: 12px; margin-bottom: 16px; }
+    .qr-buttons .btn { flex: 1; }
+    .qr-instructions { text-align: left; font-size: 0.8rem; color: var(--text-2); background: var(--surface); padding: 12px; border-radius: 6px; line-height: 1.6; }
+    .qr-instructions a { color: var(--accent); }
     footer { text-align: center; color: var(--text-3); font-size: 0.8rem; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
     footer a { color: var(--accent); text-decoration: none; }
   </style>
@@ -153,6 +162,7 @@
         <div class="btn-row">
           <button class="btn btn-secondary" onclick="copyTx()">Copy to Clipboard</button>
           <button class="btn btn-secondary" onclick="downloadTx()">Download as File</button>
+          <button class="btn btn-primary" onclick="showQRCode()">Show QR Code</button>
         </div>
       </div>
       <div class="next-steps">
@@ -218,9 +228,462 @@
     </div>
   </div>
 
+  <div id="qr-modal" class="confirm-overlay hidden">
+    <div class="qr-container">
+      <div class="qr-title">Signed Transaction QR Code</div>
+      <div class="qr-subtitle">Scan with your phone to broadcast</div>
+      <canvas id="qr-canvas"></canvas>
+      <div class="qr-info" id="qr-info"></div>
+      <div class="qr-buttons">
+        <button class="btn btn-secondary" onclick="closeQRCode()">Close</button>
+        <button class="btn btn-primary" onclick="saveQRCode()">Save as Image</button>
+      </div>
+      <div class="qr-instructions">
+        <strong>Air-Gap Workflow:</strong><br>
+        1. Scan this QR with your phone<br>
+        2. Paste the hex into <a href="https://whatsonchain.com/broadcast" target="_blank">WhatsOnChain</a><br>
+        3. Broadcast the transaction
+      </div>
+    </div>
+  </div>
+
   <script>
   (function() {
     'use strict';
+    
+    // ==========================================
+    // QR Code Generator (Pure JS, No Dependencies)
+    // Based on qr.js - Public Domain
+    // Supports alphanumeric mode for hex strings
+    // ==========================================
+    const QRCode = (function() {
+      // QR Code configuration tables
+      const EC_CODEWORDS = [
+        // L, M, Q, H error correction levels - codewords per block
+        [7,10,13,17,20,26,36,44,52,60,69,76,84,98,106,122,140,158,180,196,224,252,270,300,312,336,360,390,420,450,480,510,540,570,600,630,660,720,750,780],
+        [10,16,22,28,36,44,56,68,80,96,112,128,144,168,192,224,256,288,320,360,400,448,504,560,624,688,752,816,896,960,1024,1088,1152,1216,1280,1344,1408,1536,1600,1664],
+        [13,22,36,52,72,96,124,156,188,224,264,308,352,408,468,540,612,692,776,860,952,1048,1152,1256,1372,1496,1620,1756,1892,2028,2164,2300,2436,2572,2708,2844,2980,3176,3332,3488],
+        [17,28,44,64,88,112,144,176,208,248,288,328,376,424,476,532,588,652,716,788,860,936,1016,1096,1184,1272,1360,1448,1536,1632,1728,1824,1920,2016,2112,2208,2304,2464,2560,2656]
+      ];
+      
+      const ALPHANUM = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+      
+      // Calculate minimum QR version needed for data length
+      function getMinVersion(dataLen, ecLevel) {
+        const capacities = [
+          [25,47,77,114,154,195,244,293,346,404,466,532,604,674,746,813,919,969,1056,1108,1228,1286,1425,1501,1581,1677,1782,1897,2022,2157,2301,2361,2524,2625,2735,2927,3057,3283,3517,3669],
+          [20,38,61,90,122,154,193,230,271,321,370,416,470,531,574,644,702,742,823,890,963,1041,1094,1172,1263,1322,1429,1499,1618,1700,1787,1867,1966,2071,2181,2298,2420,2520,2640,2725],
+          [16,29,47,67,87,108,134,163,195,224,264,297,343,393,425,485,515,565,611,661,715,751,805,868,908,982,1030,1112,1168,1228,1283,1351,1423,1499,1579,1663,1751,1817,1911,1989],
+          [10,20,35,50,64,84,93,122,143,174,200,227,259,296,319,365,393,421,465,512,568,614,664,718,754,808,871,911,985,1033,1115,1171,1231,1286,1354,1426,1502,1582,1666,1714]
+        ];
+        for (let v = 0; v < 40; v++) {
+          if (capacities[ecLevel][v] >= dataLen) return v + 1;
+        }
+        return 40;
+      }
+      
+      // Reed-Solomon error correction
+      function rsGenPoly(nsym) {
+        let g = [1];
+        for (let i = 0; i < nsym; i++) {
+          const ng = new Array(g.length + 1).fill(0);
+          for (let j = 0; j < g.length; j++) {
+            ng[j] ^= g[j];
+            ng[j + 1] ^= gfMul(g[j], gfExp[i]);
+          }
+          g = ng;
+        }
+        return g;
+      }
+      
+      // Galois field multiplication tables
+      const gfExp = new Array(512);
+      const gfLog = new Array(256);
+      (function() {
+        let x = 1;
+        for (let i = 0; i < 255; i++) {
+          gfExp[i] = x;
+          gfLog[x] = i;
+          x <<= 1;
+          if (x & 0x100) x ^= 0x11d;
+        }
+        for (let i = 255; i < 512; i++) gfExp[i] = gfExp[i - 255];
+      })();
+      
+      function gfMul(x, y) {
+        if (x === 0 || y === 0) return 0;
+        return gfExp[gfLog[x] + gfLog[y]];
+      }
+      
+      function rsEncode(data, nsym) {
+        const gen = rsGenPoly(nsym);
+        const res = new Array(data.length + nsym).fill(0);
+        for (let i = 0; i < data.length; i++) res[i] = data[i];
+        for (let i = 0; i < data.length; i++) {
+          const coef = res[i];
+          if (coef !== 0) {
+            for (let j = 0; j < gen.length; j++) {
+              res[i + j] ^= gfMul(gen[j], coef);
+            }
+          }
+        }
+        return res.slice(data.length);
+      }
+      
+      // Encode alphanumeric data (for hex strings)
+      function encodeAlphanumeric(str) {
+        str = str.toUpperCase();
+        const bits = [];
+        for (let i = 0; i < str.length; i += 2) {
+          if (i + 1 < str.length) {
+            const val = ALPHANUM.indexOf(str[i]) * 45 + ALPHANUM.indexOf(str[i + 1]);
+            for (let b = 10; b >= 0; b--) bits.push((val >> b) & 1);
+          } else {
+            const val = ALPHANUM.indexOf(str[i]);
+            for (let b = 5; b >= 0; b--) bits.push((val >> b) & 1);
+          }
+        }
+        return bits;
+      }
+      
+      // Create QR code matrix
+      function createMatrix(version) {
+        const size = version * 4 + 17;
+        const matrix = [];
+        for (let i = 0; i < size; i++) {
+          matrix[i] = new Array(size).fill(null);
+        }
+        return matrix;
+      }
+      
+      // Add finder patterns
+      function addFinderPatterns(matrix) {
+        const size = matrix.length;
+        const pattern = [
+          [1,1,1,1,1,1,1],
+          [1,0,0,0,0,0,1],
+          [1,0,1,1,1,0,1],
+          [1,0,1,1,1,0,1],
+          [1,0,1,1,1,0,1],
+          [1,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1]
+        ];
+        const positions = [[0, 0], [size - 7, 0], [0, size - 7]];
+        for (const [row, col] of positions) {
+          for (let r = 0; r < 7; r++) {
+            for (let c = 0; c < 7; c++) {
+              if (row + r < size && col + c < size) {
+                matrix[row + r][col + c] = pattern[r][c];
+              }
+            }
+          }
+        }
+        // Separators
+        for (let i = 0; i < 8; i++) {
+          if (i < size) {
+            matrix[7][i] = 0; matrix[i][7] = 0;
+            matrix[7][size - 1 - i] = 0; matrix[i][size - 8] = 0;
+            matrix[size - 8][i] = 0; matrix[size - 1 - i][7] = 0;
+          }
+        }
+      }
+      
+      // Add timing patterns
+      function addTimingPatterns(matrix) {
+        const size = matrix.length;
+        for (let i = 8; i < size - 8; i++) {
+          const bit = (i + 1) % 2;
+          if (matrix[6][i] === null) matrix[6][i] = bit;
+          if (matrix[i][6] === null) matrix[i][6] = bit;
+        }
+      }
+      
+      // Add alignment patterns
+      function addAlignmentPatterns(matrix, version) {
+        if (version < 2) return;
+        const positions = getAlignmentPositions(version);
+        const pattern = [[1,1,1,1,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,1,1,1,1]];
+        for (const row of positions) {
+          for (const col of positions) {
+            if (matrix[row][col] === null) {
+              for (let r = -2; r <= 2; r++) {
+                for (let c = -2; c <= 2; c++) {
+                  matrix[row + r][col + c] = pattern[r + 2][c + 2];
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      function getAlignmentPositions(version) {
+        if (version === 1) return [];
+        const intervals = [0, 0, 18, 22, 26, 30, 34, 22, 24, 26, 28, 30, 32, 34, 26, 26, 26, 30, 30, 30, 34, 28, 26, 30, 28, 32, 30, 34, 26, 30, 26, 30, 34, 30, 34, 30, 34, 30, 34, 34, 34];
+        const size = version * 4 + 17;
+        const step = intervals[version];
+        const positions = [6];
+        let pos = size - 7;
+        while (pos > 6) {
+          positions.unshift(pos);
+          pos -= step;
+        }
+        return positions;
+      }
+      
+      // Add format info
+      function addFormatInfo(matrix, ecLevel, mask) {
+        const size = matrix.length;
+        const formatBits = getFormatBits(ecLevel, mask);
+        for (let i = 0; i < 6; i++) {
+          matrix[8][i] = formatBits[i];
+          matrix[i][8] = formatBits[14 - i];
+        }
+        matrix[8][7] = formatBits[6];
+        matrix[8][8] = formatBits[7];
+        matrix[7][8] = formatBits[8];
+        for (let i = 0; i < 6; i++) {
+          matrix[8][size - 1 - i] = formatBits[14 - i];
+          matrix[size - 1 - i][8] = formatBits[i];
+        }
+        matrix[8][size - 7] = formatBits[8];
+        matrix[8][size - 8] = formatBits[7];
+        matrix[size - 7][8] = 1; // Dark module
+      }
+      
+      function getFormatBits(ecLevel, mask) {
+        const ecBits = [1, 0, 3, 2][ecLevel];
+        let data = (ecBits << 3) | mask;
+        let rem = data;
+        for (let i = 0; i < 10; i++) {
+          rem = (rem << 1) ^ ((rem >> 9) * 0x537);
+        }
+        const bits = ((data << 10) | rem) ^ 0x5412;
+        const result = [];
+        for (let i = 14; i >= 0; i--) result.push((bits >> i) & 1);
+        return result;
+      }
+      
+      // Add version info (for version 7+)
+      function addVersionInfo(matrix, version) {
+        if (version < 7) return;
+        const size = matrix.length;
+        let rem = version;
+        for (let i = 0; i < 12; i++) {
+          rem = (rem << 1) ^ ((rem >> 11) * 0x1f25);
+        }
+        const bits = (version << 12) | rem;
+        for (let i = 0; i < 18; i++) {
+          const bit = (bits >> i) & 1;
+          const row = Math.floor(i / 3);
+          const col = i % 3 + size - 11;
+          matrix[row][col] = bit;
+          matrix[col][row] = bit;
+        }
+      }
+      
+      // Place data bits
+      function placeData(matrix, dataBits) {
+        const size = matrix.length;
+        let bitIndex = 0;
+        let up = true;
+        for (let col = size - 1; col >= 0; col -= 2) {
+          if (col === 6) col = 5;
+          for (let i = 0; i < size; i++) {
+            const row = up ? size - 1 - i : i;
+            for (let j = 0; j < 2; j++) {
+              const c = col - j;
+              if (matrix[row][c] === null) {
+                matrix[row][c] = bitIndex < dataBits.length ? dataBits[bitIndex++] : 0;
+              }
+            }
+          }
+          up = !up;
+        }
+      }
+      
+      // Apply mask pattern
+      function applyMask(matrix, mask) {
+        const size = matrix.length;
+        const maskFn = [
+          (r, c) => (r + c) % 2 === 0,
+          (r, c) => r % 2 === 0,
+          (r, c) => c % 3 === 0,
+          (r, c) => (r + c) % 3 === 0,
+          (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+          (r, c) => (r * c) % 2 + (r * c) % 3 === 0,
+          (r, c) => ((r * c) % 2 + (r * c) % 3) % 2 === 0,
+          (r, c) => ((r + c) % 2 + (r * c) % 3) % 2 === 0
+        ][mask];
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (matrix[r][c] !== null && isDataModule(r, c, size)) {
+              if (maskFn(r, c)) matrix[r][c] ^= 1;
+            }
+          }
+        }
+      }
+      
+      function isDataModule(row, col, size) {
+        // Check if module is in data area (not finder, timing, etc.)
+        if (row < 9 && col < 9) return false;
+        if (row < 9 && col >= size - 8) return false;
+        if (row >= size - 8 && col < 9) return false;
+        if (row === 6 || col === 6) return false;
+        return true;
+      }
+      
+      // Main QR generation function
+      function generate(text, ecLevel = 0) {
+        const data = text.toUpperCase();
+        const version = getMinVersion(data.length, ecLevel);
+        const size = version * 4 + 17;
+        
+        // Build data codewords
+        const bits = [];
+        // Mode indicator (alphanumeric = 0010)
+        bits.push(0, 0, 1, 0);
+        // Character count
+        const ccBits = version < 10 ? 9 : (version < 27 ? 11 : 13);
+        for (let i = ccBits - 1; i >= 0; i--) bits.push((data.length >> i) & 1);
+        // Data
+        bits.push(...encodeAlphanumeric(data));
+        // Terminator
+        const capacity = getDataCapacity(version, ecLevel);
+        while (bits.length < capacity * 8 && bits.length < capacity * 8) bits.push(0);
+        while (bits.length % 8 !== 0) bits.push(0);
+        // Pad codewords
+        const padBytes = [0xec, 0x11];
+        let padIndex = 0;
+        while (bits.length < capacity * 8) {
+          for (let i = 7; i >= 0; i--) bits.push((padBytes[padIndex] >> i) & 1);
+          padIndex = 1 - padIndex;
+        }
+        
+        // Convert to bytes
+        const dataBytes = [];
+        for (let i = 0; i < bits.length; i += 8) {
+          let byte = 0;
+          for (let j = 0; j < 8; j++) byte = (byte << 1) | bits[i + j];
+          dataBytes.push(byte);
+        }
+        
+        // Add error correction
+        const ecInfo = getECInfo(version, ecLevel);
+        const blocks = [];
+        let dataIndex = 0;
+        for (let i = 0; i < ecInfo.numBlocks; i++) {
+          const blockSize = i < ecInfo.numBlocks - ecInfo.numLargeBlocks 
+            ? ecInfo.dataPerBlock 
+            : ecInfo.dataPerBlock + 1;
+          const block = dataBytes.slice(dataIndex, dataIndex + blockSize);
+          dataIndex += blockSize;
+          const ec = rsEncode(block, ecInfo.ecPerBlock);
+          blocks.push({ data: block, ec: ec });
+        }
+        
+        // Interleave
+        const finalBits = [];
+        const maxDataLen = Math.max(...blocks.map(b => b.data.length));
+        for (let i = 0; i < maxDataLen; i++) {
+          for (const block of blocks) {
+            if (i < block.data.length) {
+              for (let j = 7; j >= 0; j--) finalBits.push((block.data[i] >> j) & 1);
+            }
+          }
+        }
+        for (let i = 0; i < ecInfo.ecPerBlock; i++) {
+          for (const block of blocks) {
+            for (let j = 7; j >= 0; j--) finalBits.push((block.ec[i] >> j) & 1);
+          }
+        }
+        
+        // Create matrix
+        const matrix = createMatrix(version);
+        addFinderPatterns(matrix);
+        addTimingPatterns(matrix);
+        addAlignmentPatterns(matrix, version);
+        addVersionInfo(matrix, version);
+        
+        // Try all masks, pick best
+        let bestMatrix = null;
+        let bestPenalty = Infinity;
+        for (let mask = 0; mask < 8; mask++) {
+          const testMatrix = matrix.map(row => [...row]);
+          placeData(testMatrix, [...finalBits]);
+          applyMask(testMatrix, mask);
+          addFormatInfo(testMatrix, ecLevel, mask);
+          const penalty = calculatePenalty(testMatrix);
+          if (penalty < bestPenalty) {
+            bestPenalty = penalty;
+            bestMatrix = testMatrix;
+          }
+        }
+        
+        return bestMatrix;
+      }
+      
+      function getDataCapacity(version, ecLevel) {
+        const total = [26,44,70,100,134,172,196,242,292,346,404,466,532,604,674,746,818,898,984,1072,1168,1264,1360,1456,1552,1648,1744,1856,1972,2092,2216,2340,2464,2596,2728,2868,3008,3148,3288,3432][version - 1];
+        const ec = EC_CODEWORDS[ecLevel][version - 1];
+        return total - ec;
+      }
+      
+      function getECInfo(version, ecLevel) {
+        const ecCodewords = EC_CODEWORDS[ecLevel][version - 1];
+        const totalCodewords = [26,44,70,100,134,172,196,242,292,346,404,466,532,604,674,746,818,898,984,1072,1168,1264,1360,1456,1552,1648,1744,1856,1972,2092,2216,2340,2464,2596,2728,2868,3008,3148,3288,3432][version - 1];
+        const dataCodewords = totalCodewords - ecCodewords;
+        const ecPerBlock = [7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30][version - 1 + ecLevel * 40];
+        const numBlocks = Math.ceil(ecCodewords / ecPerBlock);
+        const dataPerBlock = Math.floor(dataCodewords / numBlocks);
+        const numLargeBlocks = dataCodewords % numBlocks;
+        return { ecPerBlock, numBlocks, dataPerBlock, numLargeBlocks };
+      }
+      
+      function calculatePenalty(matrix) {
+        // Simplified penalty calculation
+        let penalty = 0;
+        const size = matrix.length;
+        // Rule 1: consecutive same-color modules
+        for (let r = 0; r < size; r++) {
+          let count = 1;
+          for (let c = 1; c < size; c++) {
+            if (matrix[r][c] === matrix[r][c - 1]) count++;
+            else { if (count >= 5) penalty += count - 2; count = 1; }
+          }
+          if (count >= 5) penalty += count - 2;
+        }
+        for (let c = 0; c < size; c++) {
+          let count = 1;
+          for (let r = 1; r < size; r++) {
+            if (matrix[r][c] === matrix[r - 1][c]) count++;
+            else { if (count >= 5) penalty += count - 2; count = 1; }
+          }
+          if (count >= 5) penalty += count - 2;
+        }
+        return penalty;
+      }
+      
+      // Render to canvas
+      function toCanvas(matrix, canvas, scale = 4, margin = 4) {
+        const size = matrix.length;
+        const totalSize = (size + margin * 2) * scale;
+        canvas.width = totalSize;
+        canvas.height = totalSize;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, totalSize, totalSize);
+        ctx.fillStyle = '#000000';
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (matrix[r][c]) {
+              ctx.fillRect((c + margin) * scale, (r + margin) * scale, scale, scale);
+            }
+          }
+        }
+      }
+      
+      return { generate, toCanvas };
+    })();
     
     // ==========================================
     // SHA-256 Implementation
@@ -1179,6 +1642,55 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    };
+
+    window.showQRCode = function() {
+      const hex = document.getElementById('result-hex').value;
+      if (!hex) {
+        alert('No signed transaction to display');
+        return;
+      }
+      
+      try {
+        // Generate QR code (use uppercase hex for alphanumeric mode efficiency)
+        const matrix = QRCode.generate(hex.toUpperCase(), 0); // 0 = Low EC for max capacity
+        
+        // Render to canvas
+        const canvas = document.getElementById('qr-canvas');
+        const scale = Math.min(8, Math.floor(320 / matrix.length));
+        QRCode.toCanvas(matrix, canvas, scale, 2);
+        
+        // Show info
+        const txid = document.getElementById('result-txid').textContent;
+        document.getElementById('qr-info').textContent = 
+          'TX: ' + txid.slice(0, 8) + '... | ' + hex.length + ' chars | QR v' + Math.ceil((matrix.length - 17) / 4);
+        
+        // Show modal
+        document.getElementById('qr-modal').classList.remove('hidden');
+        
+        console.log('QR code generated:', matrix.length + 'x' + matrix.length, 'modules');
+        
+      } catch (e) {
+        console.error('QR generation failed:', e);
+        alert('Failed to generate QR code: ' + e.message + '\n\nTransaction may be too large for QR code.');
+      }
+    };
+
+    window.closeQRCode = function() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    };
+
+    window.saveQRCode = function() {
+      const canvas = document.getElementById('qr-canvas');
+      const txid = document.getElementById('result-txid').textContent.slice(0, 8);
+      
+      // Convert canvas to PNG
+      const link = document.createElement('a');
+      link.download = 'signed-tx-' + txid + '-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     };
 
     // Self-test: Verify crypto implementation on load
