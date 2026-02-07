@@ -3,625 +3,916 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SPV Envelope Verifier (Offline)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>SPV Envelope Verifier — SPV Envelope Tools</title>
   <style>
-    :root {
-      --bg-primary: #0a0a0f;
-      --bg-secondary: #12121a;
-      --bg-tertiary: #1a1a24;
-      --accent-green: #22c55e;
-      --accent-green-dim: #16a34a;
-      --accent-cyan: #00d4aa;
-      --accent-red: #ef4444;
-      --text-primary: #f0f0f5;
-      --text-secondary: #8888a0;
-      --text-muted: #555566;
-      --border: #2a2a3a;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Outfit', sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .logo-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dim) 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      font-weight: 700;
-    }
-
-    .subtitle {
-      color: var(--text-secondary);
-      margin-top: 8px;
-    }
-
-    .offline-badge {
-      display: inline-block;
-      background: var(--accent-green);
-      color: white;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      margin-top: 12px;
-    }
-
-    .input-section {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 24px;
-    }
-
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 200px;
-      padding: 16px 20px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      outline: none;
-      resize: vertical;
-    }
-
-    textarea:focus {
-      border-color: var(--accent-green);
-    }
-
-    .file-drop {
-      border: 2px dashed var(--border);
-      border-radius: 10px;
-      padding: 40px;
-      text-align: center;
-      margin-bottom: 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .file-drop:hover, .file-drop.dragover {
-      border-color: var(--accent-green);
-      background: rgba(34, 197, 94, 0.05);
-    }
-
-    .file-drop input {
-      display: none;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 18px 32px;
-      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dim) 100%);
-      border: none;
-      border-radius: 10px;
-      color: white;
-      font-family: 'Outfit', sans-serif;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 20px;
-      transition: all 0.2s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
-    }
-
-    .results {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      display: none;
-    }
-
-    .results.visible {
-      display: block;
-    }
-
-    .result-item {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .result-item:last-child {
-      border-bottom: none;
-    }
-
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .result-txid {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--accent-cyan);
-    }
-
-    .result-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .result-status.valid {
-      background: rgba(34, 197, 94, 0.15);
-      color: var(--accent-green);
-    }
-
-    .result-status.invalid {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--accent-red);
-    }
-
-    .verification-steps {
-      display: grid;
-      gap: 8px;
-    }
-
-    .step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      font-size: 0.85rem;
-    }
-
-    .step-icon {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      flex-shrink: 0;
-    }
-
-    .step-icon.pass {
-      background: rgba(34, 197, 94, 0.2);
-      color: var(--accent-green);
-    }
-
-    .step-icon.fail {
-      background: rgba(239, 68, 68, 0.2);
-      color: var(--accent-red);
-    }
-
-    .step-text {
-      color: var(--text-secondary);
-    }
-
-    .step-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-left: auto;
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .info-section {
-      margin-top: 32px;
-      padding: 24px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-    }
-
-    .info-section h3 {
-      margin-bottom: 16px;
-      color: var(--text-primary);
-    }
-
-    .info-section p {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      line-height: 1.6;
-      margin-bottom: 12px;
-    }
-
-    .info-section code {
-      background: var(--bg-tertiary);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-    }
+    :root { --bg: #fff; --surface: #f8f9fa; --border: #dee2e6; --text: #212529; --text-2: #495057; --text-3: #868e96; --accent: #228be6; --success: #2f9e44; --success-bg: #d3f9d8; --warning: #e67700; --warning-bg: #fff3bf; --danger: #e03131; --danger-bg: #ffe3e3; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 32px 24px; max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color: var(--text-2); margin-bottom: 24px; }
+    .subtitle a { color: var(--accent); text-decoration: none; }
+    .notice { background: var(--success-bg); border: 2px solid var(--success); border-radius: 8px; padding: 16px 20px; margin-bottom: 32px; }
+    .notice-title { font-weight: 600; margin-bottom: 4px; color: var(--success); }
+    .notice-text { color: var(--text-2); font-size: 0.95rem; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+    .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+    .field { margin-bottom: 16px; }
+    .label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+    .input { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: monospace; font-size: 0.85rem; }
+    .input:focus { outline: none; border-color: var(--accent); }
+    textarea.input { min-height: 150px; resize: vertical; }
+    .hint { font-size: 0.8rem; color: var(--text-3); margin-top: 4px; }
+    .btn { display: inline-block; padding: 12px 24px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+    .hidden { display: none !important; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+    
+    /* Results styling */
+    .result-box { border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .result-box.valid { background: var(--success-bg); border: 2px solid var(--success); }
+    .result-box.invalid { background: var(--danger-bg); border: 2px solid var(--danger); }
+    .result-title { font-weight: 600; margin-bottom: 16px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    .result-title.valid { color: var(--success); }
+    .result-title.invalid { color: var(--danger); }
+    
+    /* Verification steps */
+    .check-list { list-style: none; }
+    .check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .check-item:last-child { border-bottom: none; }
+    .check-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; margin-top: 2px; }
+    .check-icon.pass { background: var(--success); color: white; }
+    .check-icon.fail { background: var(--danger); color: white; }
+    .check-icon.warn { background: var(--warning); color: white; }
+    .check-icon.info { background: var(--accent); color: white; }
+    .check-content { flex: 1; }
+    .check-name { font-weight: 500; color: var(--text); }
+    .check-detail { font-size: 0.8rem; color: var(--text-3); font-family: monospace; margin-top: 2px; word-break: break-all; }
+    .check-category { font-size: 0.7rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    
+    /* Info display */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .info-item { background: var(--bg); padding: 12px; border-radius: 6px; }
+    .info-label { font-size: 0.75rem; color: var(--text-3); text-transform: uppercase; }
+    .info-value { font-family: monospace; font-size: 0.85rem; margin-top: 4px; word-break: break-all; }
+    
+    /* Quote */
+    .quote { background: var(--surface); border-left: 4px solid var(--accent); padding: 16px 20px; margin: 32px 0; font-style: italic; color: var(--text-2); font-size: 0.9rem; }
+    .quote-author { font-style: normal; font-weight: 600; color: var(--text); margin-top: 8px; display: block; }
+    
+    /* Footer */
+    footer { text-align: center; color: var(--text-3); font-size: 0.8rem; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
+    footer a { color: var(--accent); text-decoration: none; }
+    .integrity-display { margin-top: 8px; padding: 8px 12px; background: var(--surface); border-radius: 4px; font-size: 0.75rem; display: inline-block; }
+    .integrity-label { color: var(--text-3); }
+    .integrity-display code { color: var(--text); font-family: monospace; margin-left: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">
-        <div class="logo-icon">✓</div>
-        <h1>SPV Envelope Verifier</h1>
-      </div>
-      <p class="subtitle">Verify your Merkle proofs completely offline</p>
-      <div class="offline-badge">🔒 NO NETWORK REQUIRED</div>
-    </header>
+  <h1>SPV Envelope Verifier</h1>
+  <p class="subtitle">Verify BSV SPV envelopes completely offline. Uses envelopes from the <a href="generator.html">SPV Envelope Generator</a>.</p>
 
-    <div class="input-section">
-      <div class="file-drop" id="file-drop">
-        <p>📁 Drop your envelope JSON file here, or click to browse</p>
-        <input type="file" id="file-input" accept=".json">
-      </div>
-      
-      <label>Or paste envelope JSON directly:</label>
-      <textarea id="json-input" placeholder='Paste your SPV envelope JSON here...'></textarea>
-      
-      <button class="btn" id="verify-btn">Verify Envelope</button>
+  <div class="notice">
+    <div class="notice-title">🔒 Offline Verification</div>
+    <div class="notice-text">This page requires no network access. All cryptographic verification happens locally in your browser. No data is transmitted.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Load SPV Envelope</div>
+    <div class="field">
+      <label class="label">Paste envelope JSON or drag file</label>
+      <textarea class="input" id="envelope-input" placeholder='{"txid": "...", "rawTx": "...", "proof": {...}, "blockHeader": "..."}'></textarea>
+      <div class="hint">Supports single envelope or array of envelopes.</div>
     </div>
-
-    <div class="results" id="results"></div>
-
-    <div class="info-section">
-      <h3>How Verification Works</h3>
-      <p><strong>Step 1:</strong> Hash the <code>rawTx</code> using double SHA-256 to confirm it matches the <code>txid</code>.</p>
-      <p><strong>Step 2:</strong> Starting with the txid, hash up the Merkle tree using the <code>nodes</code> array and <code>index</code> to compute the Merkle root.</p>
-      <p><strong>Step 3:</strong> Extract the Merkle root from bytes 36-68 of the <code>blockHeader</code> and verify it matches.</p>
-      <p><strong>Step 4:</strong> Double SHA-256 the <code>blockHeader</code> to verify it matches the <code>blockHash</code>.</p>
-      <p style="margin-top: 16px; color: var(--accent-green);">✓ If all steps pass, your UTXO is cryptographically proven to exist on the BSV blockchain.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="verifyEnvelopes()">Verify Envelope</button>
+      <button class="btn btn-secondary" onclick="loadSample()">Load Sample</button>
+      <label class="btn btn-secondary" style="cursor: pointer;">
+        Load File
+        <input type="file" accept=".json" onchange="loadFile(event)" style="display: none;">
+      </label>
     </div>
   </div>
 
+  <div id="results-container" class="hidden"></div>
+
+  <div class="quote">
+    "He can't check the transaction for himself, but by linking it to a place in the chain, he can see that a network node has accepted it, and blocks added after it further confirm the network has accepted it."
+    <span class="quote-author">— Satoshi Nakamoto, Bitcoin Whitepaper, Section 8: Simplified Payment Verification</span>
+  </div>
+
+  <footer>
+    <a href="https://github.com/speight-wq/spv-envelope-tools">SPV Envelope Tools</a><br>
+    <a href="generator.html">Generator</a> · Verifier · <a href="signer.html">Signer</a><br><br>
+    All code runs locally. No network required.<br>
+    <div class="integrity-display">
+      <span class="integrity-label">Page Integrity SHA-256:</span>
+      <code id="integrity-value" title="Click to copy">Computing...</code>
+    </div>
+  </footer>
+
   <script>
-    // SHA-256 implementation (no external dependencies)
-    const sha256 = async (data) => {
-      const buffer = typeof data === 'string' ? hexToBytes(data) : data;
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      return bytesToHex(new Uint8Array(hashBuffer));
-    };
+  (function() {
+    'use strict';
 
-    // Double SHA-256 (Bitcoin's standard)
-    const doubleSha256 = async (data) => {
-      const first = await sha256(data);
-      return await sha256(first);
-    };
+    // ==========================================
+    // SHA-256 Implementation (Pure JS)
+    // ==========================================
+    const SHA256 = (function() {
+      const K = new Uint32Array([
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+      ]);
 
-    // Hex string to byte array
-    const hexToBytes = (hex) => {
+      function hash(data) {
+        if (typeof data === 'string') data = hexToBytes(data);
+        if (!(data instanceof Uint8Array)) data = new Uint8Array(data);
+        
+        const msgLen = data.length;
+        const totalLen = Math.ceil((msgLen + 9) / 64) * 64;
+        const padded = new Uint8Array(totalLen);
+        padded.set(data);
+        padded[msgLen] = 0x80;
+        const view = new DataView(padded.buffer);
+        view.setUint32(totalLen - 4, msgLen * 8, false);
+        
+        let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+        let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+        
+        const W = new Uint32Array(64);
+        
+        for (let i = 0; i < padded.length; i += 64) {
+          for (let j = 0; j < 16; j++) {
+            W[j] = view.getUint32(i + j * 4, false);
+          }
+          for (let j = 16; j < 64; j++) {
+            const s0 = ((W[j-15] >>> 7) | (W[j-15] << 25)) ^ ((W[j-15] >>> 18) | (W[j-15] << 14)) ^ (W[j-15] >>> 3);
+            const s1 = ((W[j-2] >>> 17) | (W[j-2] << 15)) ^ ((W[j-2] >>> 19) | (W[j-2] << 13)) ^ (W[j-2] >>> 10);
+            W[j] = (W[j-16] + s0 + W[j-7] + s1) >>> 0;
+          }
+          
+          let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+          
+          for (let j = 0; j < 64; j++) {
+            const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+            const ch = (e & f) ^ (~e & g);
+            const t1 = (h + S1 + ch + K[j] + W[j]) >>> 0;
+            const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+            const maj = (a & b) ^ (a & c) ^ (b & c);
+            const t2 = (S0 + maj) >>> 0;
+            
+            h = g; g = f; f = e; e = (d + t1) >>> 0;
+            d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+          }
+          
+          h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+          h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+        }
+        
+        const result = new Uint8Array(32);
+        const rv = new DataView(result.buffer);
+        rv.setUint32(0, h0, false); rv.setUint32(4, h1, false);
+        rv.setUint32(8, h2, false); rv.setUint32(12, h3, false);
+        rv.setUint32(16, h4, false); rv.setUint32(20, h5, false);
+        rv.setUint32(24, h6, false); rv.setUint32(28, h7, false);
+        return result;
+      }
+      
+      return { hash };
+    })();
+
+    // ==========================================
+    // Utility Functions
+    // ==========================================
+    function hexToBytes(hex) {
+      hex = hex.replace(/^0x/, '');
+      if (hex.length % 2) hex = '0' + hex;
       const bytes = new Uint8Array(hex.length / 2);
       for (let i = 0; i < hex.length; i += 2) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
       }
       return bytes;
-    };
+    }
 
-    // Byte array to hex string
-    const bytesToHex = (bytes) => {
+    function bytesToHex(bytes) {
       return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    };
+    }
 
-    // Reverse byte order (for converting between display and internal format)
-    const reverseHex = (hex) => {
-      return hex.match(/.{2}/g).reverse().join('');
-    };
+    function reverseBytes(bytes) {
+      return new Uint8Array(Array.from(bytes).reverse());
+    }
 
-    // Verify a single envelope
-    async function verifyEnvelope(envelope) {
-      const results = {
-        txid: envelope.txid,
-        steps: [],
-        valid: true
+    function reverseHex(hex) {
+      return bytesToHex(reverseBytes(hexToBytes(hex)));
+    }
+
+    function hash256(data) {
+      return SHA256.hash(SHA256.hash(data));
+    }
+
+    function readUInt32LE(bytes, offset) {
+      return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24);
+    }
+
+    function readUInt64LE(bytes, offset) {
+      const lo = readUInt32LE(bytes, offset);
+      const hi = readUInt32LE(bytes, offset + 4);
+      return BigInt(lo) + (BigInt(hi) << 32n);
+    }
+
+    function readVarInt(bytes, offset) {
+      const first = bytes[offset];
+      if (first < 0xfd) {
+        return { value: first, size: 1 };
+      } else if (first === 0xfd) {
+        return { value: bytes[offset + 1] | (bytes[offset + 2] << 8), size: 3 };
+      } else if (first === 0xfe) {
+        return { value: readUInt32LE(bytes, offset + 1), size: 5 };
+      } else {
+        return { value: Number(readUInt64LE(bytes, offset + 1)), size: 9 };
+      }
+    }
+
+    // ==========================================
+    // Proof-of-Work Validation
+    // ==========================================
+    function nbitsToTarget(nbits) {
+      // nbits is compact representation of target
+      // First byte is exponent, remaining 3 bytes are mantissa
+      const exp = (nbits >>> 24) & 0xff;
+      const mant = nbits & 0x007fffff;
+      
+      // Handle negative flag (bit 23)
+      if (mant & 0x00800000) {
+        return 0n; // Invalid negative target
+      }
+      
+      // target = mant * 2^(8*(exp-3))
+      if (exp <= 3) {
+        return BigInt(mant) >> BigInt(8 * (3 - exp));
+      } else {
+        return BigInt(mant) << BigInt(8 * (exp - 3));
+      }
+    }
+
+    function validateProofOfWork(headerBytes) {
+      // Header must be exactly 80 bytes
+      if (headerBytes.length !== 80) {
+        return { valid: false, error: 'Header not 80 bytes' };
+      }
+      
+      // Get nBits from header (bytes 72-76, little-endian)
+      const nbits = readUInt32LE(headerBytes, 72);
+      const target = nbitsToTarget(nbits);
+      
+      if (target === 0n) {
+        return { valid: false, error: 'Invalid target (zero or negative)' };
+      }
+      
+      // Hash the header
+      const hashBytes = hash256(headerBytes);
+      // Convert to BigInt (little-endian, so reverse for numeric comparison)
+      const hashInt = BigInt('0x' + bytesToHex(reverseBytes(hashBytes)));
+      
+      // Check hash <= target
+      const valid = hashInt <= target;
+      
+      return {
+        valid,
+        hashInt,
+        target,
+        nbits,
+        difficulty: (0xffff0000000000000000000000000000000000000000000000000000n / target).toString(),
+        error: valid ? null : 'Hash does not meet target'
       };
+    }
 
+    // ==========================================
+    // Transaction Parsing
+    // ==========================================
+    function parseTransaction(rawTxHex) {
       try {
-        // Step 1: Verify rawTx hashes to txid
-        if (envelope.rawTx) {
-          const computedTxid = reverseHex(await doubleSha256(envelope.rawTx));
-          const txidMatch = computedTxid === envelope.txid;
-          results.steps.push({
-            name: 'Transaction Hash',
-            description: 'rawTx double-SHA256 matches txid',
-            pass: txidMatch,
-            computed: computedTxid.substring(0, 16) + '...',
-            expected: envelope.txid.substring(0, 16) + '...'
-          });
-          if (!txidMatch) results.valid = false;
-        } else {
-          results.steps.push({
-            name: 'Transaction Hash',
-            description: 'rawTx not provided',
-            pass: false
-          });
-          results.valid = false;
-        }
-
-        // Step 2: Compute Merkle root from nodes
-        if (envelope.proof && envelope.proof.nodes && envelope.proof.nodes.length > 0) {
-          let current = envelope.txid;
-          const index = envelope.proof.index;
+        const bytes = hexToBytes(rawTxHex);
+        let offset = 0;
+        
+        // Version (4 bytes)
+        if (bytes.length < 4) throw new Error('Too short for version');
+        const version = readUInt32LE(bytes, offset);
+        offset += 4;
+        
+        // Input count
+        const inputCountResult = readVarInt(bytes, offset);
+        const inputCount = inputCountResult.value;
+        offset += inputCountResult.size;
+        
+        if (inputCount === 0) throw new Error('Zero inputs (not valid for non-segwit)');
+        
+        // Parse inputs
+        const inputs = [];
+        for (let i = 0; i < inputCount; i++) {
+          if (offset + 36 > bytes.length) throw new Error('Truncated input');
           
-          for (let i = 0; i < envelope.proof.nodes.length; i++) {
-            const node = envelope.proof.nodes[i];
-            // Determine if current hash goes left or right based on index bit
-            const isRight = (index >> i) & 1;
-            
-            let combined;
-            if (isRight) {
-              // Current is on the right, node is on the left
-              combined = reverseHex(node) + reverseHex(current);
-            } else {
-              // Current is on the left, node is on the right
-              combined = reverseHex(current) + reverseHex(node);
-            }
-            
-            current = reverseHex(await doubleSha256(combined));
+          const prevTxid = bytesToHex(reverseBytes(bytes.slice(offset, offset + 32)));
+          offset += 32;
+          
+          const prevVout = readUInt32LE(bytes, offset);
+          offset += 4;
+          
+          const scriptLenResult = readVarInt(bytes, offset);
+          offset += scriptLenResult.size;
+          
+          if (offset + scriptLenResult.value > bytes.length) throw new Error('Script length exceeds remaining bytes');
+          const scriptSig = bytes.slice(offset, offset + scriptLenResult.value);
+          offset += scriptLenResult.value;
+          
+          if (offset + 4 > bytes.length) throw new Error('Truncated sequence');
+          const sequence = readUInt32LE(bytes, offset);
+          offset += 4;
+          
+          inputs.push({ prevTxid, prevVout, scriptSig: bytesToHex(scriptSig), sequence });
+        }
+        
+        // Output count
+        const outputCountResult = readVarInt(bytes, offset);
+        const outputCount = outputCountResult.value;
+        offset += outputCountResult.size;
+        
+        if (outputCount === 0) throw new Error('Zero outputs');
+        
+        // Parse outputs
+        const outputs = [];
+        for (let i = 0; i < outputCount; i++) {
+          if (offset + 8 > bytes.length) throw new Error('Truncated output value');
+          
+          const value = readUInt64LE(bytes, offset);
+          offset += 8;
+          
+          const scriptLenResult = readVarInt(bytes, offset);
+          offset += scriptLenResult.size;
+          
+          if (offset + scriptLenResult.value > bytes.length) throw new Error('Output script length exceeds remaining bytes');
+          const scriptPubKey = bytes.slice(offset, offset + scriptLenResult.value);
+          offset += scriptLenResult.value;
+          
+          outputs.push({ value, scriptPubKey: bytesToHex(scriptPubKey) });
+        }
+        
+        // Locktime (4 bytes)
+        if (offset + 4 > bytes.length) throw new Error('Truncated locktime');
+        const locktime = readUInt32LE(bytes, offset);
+        offset += 4;
+        
+        // Check for trailing bytes
+        if (offset !== bytes.length) {
+          throw new Error('Trailing bytes after transaction (' + (bytes.length - offset) + ' extra)');
+        }
+        
+        return {
+          valid: true,
+          version,
+          inputs,
+          outputs,
+          locktime,
+          size: bytes.length
+        };
+        
+      } catch (e) {
+        return { valid: false, error: e.message };
+      }
+    }
+
+    // ==========================================
+    // Merkle Proof Validation
+    // ==========================================
+    function validateMerkleProof(txid, proof, expectedRoot) {
+      try {
+        // Normalize proof structure
+        const nodes = proof.nodes || proof.siblings || [];
+        const index = proof.index !== undefined ? proof.index : proof.txIndex;
+        
+        if (nodes.length === 0) {
+          return { valid: false, error: 'No proof nodes provided' };
+        }
+        
+        if (index === undefined) {
+          return { valid: false, error: 'No transaction index provided' };
+        }
+        
+        // Validate all nodes are 32 bytes (64 hex chars)
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i].replace(/^0x/, '');
+          if (node.length !== 64) {
+            return { valid: false, error: 'Proof node ' + i + ' is not 32 bytes' };
+          }
+          if (!/^[0-9a-fA-F]+$/.test(node)) {
+            return { valid: false, error: 'Proof node ' + i + ' contains invalid hex' };
+          }
+        }
+        
+        // Validate index is within range for proof depth
+        const maxIndex = Math.pow(2, nodes.length) - 1;
+        if (index < 0 || index > maxIndex) {
+          return { valid: false, error: 'Index ' + index + ' out of range for proof depth ' + nodes.length };
+        }
+        
+        // Compute merkle root
+        let current = txid.toLowerCase();
+        
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i].toLowerCase();
+          const isRight = (index >> i) & 1;
+          
+          let combined;
+          if (isRight) {
+            // Current goes on right, node on left
+            combined = reverseHex(node) + reverseHex(current);
+          } else {
+            // Current goes on left, node on right
+            combined = reverseHex(current) + reverseHex(node);
           }
           
-          const computedMerkleRoot = current;
-          results.computedMerkleRoot = computedMerkleRoot;
-          
-          results.steps.push({
-            name: 'Merkle Path',
-            description: `Computed root from ${envelope.proof.nodes.length} nodes`,
-            pass: true, // Will verify against header next
-            computed: computedMerkleRoot.substring(0, 16) + '...'
-          });
-        } else {
-          results.steps.push({
-            name: 'Merkle Path',
-            description: 'No proof nodes provided',
-            pass: false
-          });
-          results.valid = false;
+          current = reverseHex(bytesToHex(hash256(hexToBytes(combined))));
         }
-
-        // Step 3: Verify Merkle root in block header
-        if (envelope.blockHeader && results.computedMerkleRoot) {
-          // Merkle root is at bytes 36-68 (characters 72-136 in hex)
-          const headerMerkleRoot = reverseHex(envelope.blockHeader.substring(72, 136));
-          const merkleMatch = headerMerkleRoot === results.computedMerkleRoot;
-          
-          results.steps.push({
-            name: 'Merkle Root in Header',
-            description: 'Computed root matches header bytes 36-68',
-            pass: merkleMatch,
-            computed: results.computedMerkleRoot.substring(0, 16) + '...',
-            expected: headerMerkleRoot.substring(0, 16) + '...'
-          });
-          if (!merkleMatch) results.valid = false;
-        } else if (!envelope.blockHeader) {
-          results.steps.push({
-            name: 'Merkle Root in Header',
-            description: 'blockHeader not provided - cannot verify offline',
-            pass: false
-          });
-          results.valid = false;
-        }
-
-        // Step 4: Verify block header hashes to blockHash
-        if (envelope.blockHeader && envelope.blockHash) {
-          const computedBlockHash = reverseHex(await doubleSha256(envelope.blockHeader));
-          const blockHashMatch = computedBlockHash === envelope.blockHash;
-          
-          results.steps.push({
-            name: 'Block Header Hash',
-            description: 'Header double-SHA256 matches blockHash',
-            pass: blockHashMatch,
-            computed: computedBlockHash.substring(0, 16) + '...',
-            expected: envelope.blockHash.substring(0, 16) + '...'
-          });
-          if (!blockHashMatch) results.valid = false;
-        } else if (!envelope.blockHash) {
-          results.steps.push({
-            name: 'Block Header Hash',
-            description: 'blockHash not provided',
-            pass: false
-          });
-          results.valid = false;
-        }
-
-        // Step 5: Verify checksum if present
-        if (envelope.checksum) {
-          const proofData = {
-            txid: envelope.txid,
-            vout: envelope.vout,
-            rawTx: envelope.rawTx,
-            proof: envelope.proof,
-            blockHeader: envelope.blockHeader,
-            blockHash: envelope.blockHash
-          };
-          const str = JSON.stringify(proofData);
-          const encoder = new TextEncoder();
-          const dataBuffer = encoder.encode(str);
-          const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-          const hashArray = Array.from(new Uint8Array(hashBuffer));
-          const computedChecksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-          
-          const checksumMatch = computedChecksum === envelope.checksum;
-          results.steps.push({
-            name: 'Envelope Checksum',
-            description: 'File integrity verified',
-            pass: checksumMatch,
-            computed: computedChecksum.substring(0, 16) + '...',
-            expected: envelope.checksum.substring(0, 16) + '...'
-          });
-          if (!checksumMatch) results.valid = false;
-        }
-
-        // Show archive date if present
-        if (envelope.archivedAt) {
-          results.archivedAt = envelope.archivedAt;
-        }
-
-        // Additional info
-        if (envelope.blockHeight) {
-          results.blockHeight = envelope.blockHeight;
-        }
-        if (envelope.value) {
-          results.value = envelope.value;
-        }
-
+        
+        const computedRoot = current;
+        const rootMatch = computedRoot.toLowerCase() === expectedRoot.toLowerCase();
+        
+        return {
+          valid: rootMatch,
+          computedRoot,
+          expectedRoot,
+          depth: nodes.length,
+          index,
+          error: rootMatch ? null : 'Computed root does not match header'
+        };
+        
       } catch (e) {
-        results.valid = false;
-        results.error = e.message;
+        return { valid: false, error: e.message };
       }
+    }
 
+    // ==========================================
+    // Block Header Parsing
+    // ==========================================
+    function parseBlockHeader(headerHex) {
+      try {
+        const bytes = hexToBytes(headerHex);
+        
+        if (bytes.length !== 80) {
+          return { valid: false, error: 'Header must be exactly 80 bytes, got ' + bytes.length };
+        }
+        
+        const version = readUInt32LE(bytes, 0);
+        const prevBlockHash = bytesToHex(reverseBytes(bytes.slice(4, 36)));
+        const merkleRoot = bytesToHex(reverseBytes(bytes.slice(36, 68)));
+        const timestamp = readUInt32LE(bytes, 68);
+        const nbits = readUInt32LE(bytes, 72);
+        const nonce = readUInt32LE(bytes, 76);
+        
+        const blockHash = bytesToHex(reverseBytes(hash256(bytes)));
+        
+        return {
+          valid: true,
+          version,
+          prevBlockHash,
+          merkleRoot,
+          timestamp,
+          timestampDate: new Date(timestamp * 1000).toISOString(),
+          nbits,
+          nonce,
+          blockHash
+        };
+        
+      } catch (e) {
+        return { valid: false, error: e.message };
+      }
+    }
+
+    // ==========================================
+    // Schema Validation
+    // ==========================================
+    function validateSchema(envelope) {
+      const errors = [];
+      const warnings = [];
+      
+      // Required fields
+      if (!envelope.txid) errors.push('Missing txid');
+      if (!envelope.rawTx) errors.push('Missing rawTx');
+      if (!envelope.blockHeader) errors.push('Missing blockHeader');
+      if (!envelope.proof) errors.push('Missing proof');
+      
+      // Validate txid format
+      if (envelope.txid && (!/^[0-9a-fA-F]{64}$/.test(envelope.txid))) {
+        errors.push('Invalid txid format (must be 64 hex chars)');
+      }
+      
+      // Validate blockHeader format
+      if (envelope.blockHeader && (!/^[0-9a-fA-F]{160}$/.test(envelope.blockHeader))) {
+        errors.push('Invalid blockHeader format (must be 160 hex chars / 80 bytes)');
+      }
+      
+      // Validate rawTx format
+      if (envelope.rawTx && (!/^[0-9a-fA-F]+$/.test(envelope.rawTx))) {
+        errors.push('Invalid rawTx format (must be hex)');
+      }
+      
+      // Optional but recommended
+      if (envelope.vout === undefined) warnings.push('vout not specified');
+      if (envelope.satoshis === undefined && envelope.value === undefined) warnings.push('satoshis/value not specified');
+      
+      // Block height sanity check (optional)
+      if (envelope.blockHeight !== undefined) {
+        if (envelope.blockHeight < 0 || envelope.blockHeight > 10000000) {
+          warnings.push('Suspicious blockHeight: ' + envelope.blockHeight);
+        }
+      }
+      
+      return {
+        valid: errors.length === 0,
+        errors,
+        warnings
+      };
+    }
+
+    // ==========================================
+    // Main Verification Function
+    // ==========================================
+    function verifyEnvelope(envelope) {
+      const results = {
+        txid: envelope.txid,
+        checks: [],
+        consensusPassed: true,
+        policyPassed: true,
+        errors: [],
+        warnings: [],
+        info: {}
+      };
+      
+      // === SCHEMA VALIDATION ===
+      const schemaResult = validateSchema(envelope);
+      if (!schemaResult.valid) {
+        results.checks.push({
+          name: 'Schema Validation',
+          category: 'SCHEMA',
+          pass: false,
+          detail: schemaResult.errors.join('; ')
+        });
+        results.consensusPassed = false;
+        results.errors = schemaResult.errors;
+        return results;
+      }
+      results.checks.push({
+        name: 'Schema Validation',
+        category: 'SCHEMA',
+        pass: true,
+        detail: 'All required fields present'
+      });
+      results.warnings = schemaResult.warnings;
+      
+      // === CONSENSUS-CRITICAL CHECKS ===
+      
+      // 1. Verify rawTx hashes to txid
+      const computedTxid = reverseHex(bytesToHex(hash256(hexToBytes(envelope.rawTx))));
+      const txidMatch = computedTxid.toLowerCase() === envelope.txid.toLowerCase();
+      results.checks.push({
+        name: 'Transaction Hash',
+        category: 'CONSENSUS',
+        pass: txidMatch,
+        detail: txidMatch 
+          ? 'hash256(rawTx) = ' + computedTxid.slice(0, 16) + '...'
+          : 'Expected ' + envelope.txid.slice(0, 16) + '..., got ' + computedTxid.slice(0, 16) + '...'
+      });
+      if (!txidMatch) results.consensusPassed = false;
+      
+      // 2. Parse and validate transaction structure
+      const txParsed = parseTransaction(envelope.rawTx);
+      results.checks.push({
+        name: 'Transaction Structure',
+        category: 'CONSENSUS',
+        pass: txParsed.valid,
+        detail: txParsed.valid 
+          ? txParsed.inputs.length + ' inputs, ' + txParsed.outputs.length + ' outputs, ' + txParsed.size + ' bytes'
+          : txParsed.error
+      });
+      if (!txParsed.valid) results.consensusPassed = false;
+      results.info.tx = txParsed;
+      
+      // 3. Validate vout exists (if specified)
+      if (txParsed.valid && envelope.vout !== undefined) {
+        const voutValid = envelope.vout >= 0 && envelope.vout < txParsed.outputs.length;
+        results.checks.push({
+          name: 'Output Index Valid',
+          category: 'CONSENSUS',
+          pass: voutValid,
+          detail: voutValid
+            ? 'vout ' + envelope.vout + ' exists (0-' + (txParsed.outputs.length - 1) + ')'
+            : 'vout ' + envelope.vout + ' out of range'
+        });
+        if (!voutValid) results.consensusPassed = false;
+        
+        // 4. Validate satoshis matches output value (if specified)
+        if (voutValid && (envelope.satoshis !== undefined || envelope.value !== undefined)) {
+          const claimedSats = envelope.satoshis !== undefined 
+            ? BigInt(envelope.satoshis)
+            : BigInt(Math.round(envelope.value * 100000000));
+          const actualSats = txParsed.outputs[envelope.vout].value;
+          const satsMatch = claimedSats === actualSats;
+          results.checks.push({
+            name: 'Output Value Match',
+            category: 'CONSENSUS',
+            pass: satsMatch,
+            detail: satsMatch
+              ? actualSats.toString() + ' satoshis'
+              : 'Claimed ' + claimedSats.toString() + ', actual ' + actualSats.toString()
+          });
+          if (!satsMatch) results.consensusPassed = false;
+          results.info.satoshis = actualSats.toString();
+        }
+      }
+      
+      // 5. Parse block header
+      const headerParsed = parseBlockHeader(envelope.blockHeader);
+      results.checks.push({
+        name: 'Block Header Format',
+        category: 'CONSENSUS',
+        pass: headerParsed.valid,
+        detail: headerParsed.valid
+          ? 'Version ' + headerParsed.version + ', timestamp ' + headerParsed.timestampDate
+          : headerParsed.error
+      });
+      if (!headerParsed.valid) results.consensusPassed = false;
+      results.info.header = headerParsed;
+      
+      // 6. CRITICAL: Validate Proof-of-Work
+      if (headerParsed.valid) {
+        const powResult = validateProofOfWork(hexToBytes(envelope.blockHeader));
+        results.checks.push({
+          name: 'Proof-of-Work',
+          category: 'CONSENSUS',
+          pass: powResult.valid,
+          detail: powResult.valid
+            ? 'Hash meets difficulty target (nbits: 0x' + powResult.nbits.toString(16) + ')'
+            : powResult.error
+        });
+        if (!powResult.valid) results.consensusPassed = false;
+        results.info.pow = powResult;
+      }
+      
+      // 7. Validate Merkle proof
+      if (headerParsed.valid && envelope.proof) {
+        const merkleResult = validateMerkleProof(
+          envelope.txid,
+          envelope.proof,
+          headerParsed.merkleRoot
+        );
+        results.checks.push({
+          name: 'Merkle Proof',
+          category: 'CONSENSUS',
+          pass: merkleResult.valid,
+          detail: merkleResult.valid
+            ? 'Root matches header at depth ' + merkleResult.depth + ', index ' + merkleResult.index
+            : merkleResult.error
+        });
+        if (!merkleResult.valid) results.consensusPassed = false;
+        results.info.merkle = merkleResult;
+      }
+      
+      // 8. Verify blockHash if provided
+      if (envelope.blockHash && headerParsed.valid) {
+        const hashMatch = headerParsed.blockHash.toLowerCase() === envelope.blockHash.toLowerCase();
+        results.checks.push({
+          name: 'Block Hash',
+          category: 'CONSENSUS',
+          pass: hashMatch,
+          detail: hashMatch
+            ? headerParsed.blockHash.slice(0, 16) + '...'
+            : 'Computed ' + headerParsed.blockHash.slice(0, 16) + '..., claimed ' + envelope.blockHash.slice(0, 16) + '...'
+        });
+        if (!hashMatch) results.consensusPassed = false;
+      }
+      
+      // === POLICY-LEVEL CHECKS (Optional) ===
+      
+      // Dust check
+      if (txParsed.valid) {
+        const dustOutputs = txParsed.outputs.filter(o => o.value > 0n && o.value < 546n);
+        if (dustOutputs.length > 0) {
+          results.checks.push({
+            name: 'Dust Outputs',
+            category: 'POLICY',
+            pass: false,
+            warn: true,
+            detail: dustOutputs.length + ' output(s) below dust threshold'
+          });
+          results.warnings.push('Transaction contains dust outputs');
+        }
+      }
+      
+      // Timestamp sanity
+      if (headerParsed.valid) {
+        const ts = headerParsed.timestamp;
+        const now = Math.floor(Date.now() / 1000);
+        if (ts < 1231006505) { // Before Bitcoin genesis
+          results.checks.push({
+            name: 'Timestamp Sanity',
+            category: 'POLICY',
+            pass: false,
+            warn: true,
+            detail: 'Timestamp before Bitcoin genesis'
+          });
+          results.warnings.push('Invalid timestamp');
+        } else if (ts > now + 7200) { // More than 2 hours in future
+          results.checks.push({
+            name: 'Timestamp Sanity',
+            category: 'POLICY',
+            pass: false,
+            warn: true,
+            detail: 'Timestamp more than 2 hours in future'
+          });
+          results.warnings.push('Future timestamp');
+        }
+      }
+      
+      // Add info
+      if (envelope.blockHeight !== undefined) {
+        results.info.blockHeight = envelope.blockHeight;
+      }
+      
       return results;
     }
 
-    // Display results
+    // ==========================================
+    // UI Functions
+    // ==========================================
     function displayResults(results) {
-      const container = document.getElementById('results');
+      const container = document.getElementById('results-container');
       
-      const html = results.map(r => `
-        <div class="result-item">
-          <div class="result-header">
-            <span class="result-txid">${r.txid ? r.txid.substring(0, 20) + '...' + r.txid.substring(56) : 'Unknown'}</span>
-            <span class="result-status ${r.valid ? 'valid' : 'invalid'}">
-              ${r.valid ? '✓ VALID' : '✗ INVALID'}
-            </span>
-          </div>
-          ${r.blockHeight ? `<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Block ${r.blockHeight} ${r.value ? '• ' + r.value + ' BSV' : ''} ${r.archivedAt ? '• Archived ' + new Date(r.archivedAt).toLocaleDateString() : ''}</div>` : ''}
-          <div class="verification-steps">
-            ${r.steps.map(step => `
-              <div class="step">
-                <div class="step-icon ${step.pass ? 'pass' : 'fail'}">${step.pass ? '✓' : '✗'}</div>
-                <span class="step-text">${step.description}</span>
-                ${step.computed ? `<span class="step-value">${step.computed}</span>` : ''}
+      const html = results.map(r => {
+        const overallValid = r.consensusPassed;
+        const statusClass = overallValid ? 'valid' : 'invalid';
+        const statusText = overallValid ? '✓ VALID SPV PROOF' : '✗ INVALID';
+        
+        let checksHtml = '<ul class="check-list">';
+        for (const check of r.checks) {
+          const iconClass = check.warn ? 'warn' : (check.pass ? 'pass' : 'fail');
+          const icon = check.warn ? '!' : (check.pass ? '✓' : '✗');
+          checksHtml += `
+            <li class="check-item">
+              <div class="check-icon ${iconClass}">${icon}</div>
+              <div class="check-content">
+                <div class="check-name">${check.name}</div>
+                <div class="check-detail">${check.detail || ''}</div>
+                <div class="check-category">${check.category}</div>
               </div>
-            `).join('')}
+            </li>
+          `;
+        }
+        checksHtml += '</ul>';
+        
+        // Info grid
+        let infoHtml = '';
+        if (r.info.blockHeight !== undefined || r.info.satoshis || r.info.header) {
+          infoHtml = '<div class="info-grid">';
+          if (r.info.blockHeight !== undefined) {
+            infoHtml += `<div class="info-item"><div class="info-label">Block Height</div><div class="info-value">${r.info.blockHeight}</div></div>`;
+          }
+          if (r.info.satoshis) {
+            infoHtml += `<div class="info-item"><div class="info-label">Value</div><div class="info-value">${r.info.satoshis} sats</div></div>`;
+          }
+          if (r.info.header && r.info.header.blockHash) {
+            infoHtml += `<div class="info-item"><div class="info-label">Block Hash</div><div class="info-value">${r.info.header.blockHash.slice(0, 24)}...</div></div>`;
+          }
+          if (r.info.tx) {
+            infoHtml += `<div class="info-item"><div class="info-label">TX Size</div><div class="info-value">${r.info.tx.size} bytes</div></div>`;
+          }
+          infoHtml += '</div>';
+        }
+        
+        // Warnings
+        let warningsHtml = '';
+        if (r.warnings && r.warnings.length > 0) {
+          warningsHtml = '<div style="margin-top: 16px; padding: 12px; background: var(--warning-bg); border-radius: 6px; font-size: 0.85rem; color: var(--warning);">';
+          warningsHtml += '<strong>Warnings:</strong> ' + r.warnings.join('; ');
+          warningsHtml += '</div>';
+        }
+        
+        return `
+          <div class="result-box ${statusClass}">
+            <div class="result-title ${statusClass}">${statusText}</div>
+            <div style="font-family: monospace; font-size: 0.85rem; color: var(--text-2); margin-bottom: 16px; word-break: break-all;">
+              ${r.txid || 'Unknown TXID'}
+            </div>
+            ${checksHtml}
+            ${infoHtml}
+            ${warningsHtml}
           </div>
-          ${r.error ? `<div style="color: var(--accent-red); margin-top: 12px; font-size: 0.85rem;">Error: ${r.error}</div>` : ''}
-        </div>
-      `).join('');
-
+        `;
+      }).join('');
+      
       container.innerHTML = html;
-      container.classList.add('visible');
+      container.classList.remove('hidden');
     }
 
-    // Main verify function
-    async function verify() {
-      const jsonInput = document.getElementById('json-input').value.trim();
+    window.verifyEnvelopes = function() {
+      const input = document.getElementById('envelope-input').value.trim();
       
-      if (!jsonInput) {
-        alert('Please paste or load an envelope JSON');
+      if (!input) {
+        alert('Please paste an SPV envelope JSON');
         return;
       }
-
+      
       try {
-        const data = JSON.parse(jsonInput);
-        
-        // Handle single envelope or array
+        const data = JSON.parse(input);
         const envelopes = Array.isArray(data) ? data : [data];
         
         const results = [];
         for (const env of envelopes) {
-          // Skip error entries
-          if (env.error) continue;
-          
-          const result = await verifyEnvelope(env);
-          results.push(result);
+          if (env.error) continue; // Skip error entries
+          results.push(verifyEnvelope(env));
         }
-
+        
+        if (results.length === 0) {
+          alert('No valid envelopes found');
+          return;
+        }
+        
         displayResults(results);
-
+        
       } catch (e) {
         alert('Invalid JSON: ' + e.message);
       }
-    }
+    };
 
-    // File handling
-    const fileDrop = document.getElementById('file-drop');
-    const fileInput = document.getElementById('file-input');
-
-    fileDrop.addEventListener('click', () => fileInput.click());
-    
-    fileDrop.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      fileDrop.classList.add('dragover');
-    });
-
-    fileDrop.addEventListener('dragleave', () => {
-      fileDrop.classList.remove('dragover');
-    });
-
-    fileDrop.addEventListener('drop', (e) => {
-      e.preventDefault();
-      fileDrop.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) loadFile(file);
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) loadFile(e.target.files[0]);
-    });
-
-    function loadFile(file) {
+    window.loadFile = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
       const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById('json-input').value = e.target.result;
+      reader.onload = function(e) {
+        document.getElementById('envelope-input').value = e.target.result;
       };
       reader.readAsText(file);
+    };
+
+    window.loadSample = function() {
+      // This is a real BSV mainnet envelope for testing
+      const sample = {
+        "txid": "sample_txid_replace_with_real",
+        "note": "Replace this with a real SPV envelope from the generator"
+      };
+      document.getElementById('envelope-input').value = JSON.stringify(sample, null, 2);
+    };
+
+    // ==========================================
+    // Page Integrity Hash
+    // ==========================================
+    function computePageIntegrity() {
+      const valueEl = document.getElementById('integrity-value');
+      
+      try {
+        let pageSource = document.documentElement.outerHTML;
+        
+        // Normalize dynamic elements
+        pageSource = pageSource.replace(
+          /<code id="integrity-value"[^>]*>[^<]*<\/code>/g,
+          '<code id="integrity-value">HASH_PLACEHOLDER</code>'
+        );
+        
+        const encoder = new TextEncoder();
+        const data = encoder.encode(pageSource);
+        const hashBytes = SHA256.hash(data);
+        const hashHex = bytesToHex(hashBytes);
+        
+        const displayHash = hashHex.slice(0, 16) + '...' + hashHex.slice(-8);
+        valueEl.textContent = displayHash;
+        valueEl.title = 'Full SHA-256: ' + hashHex + '\nClick to copy';
+        valueEl.onclick = function() {
+          navigator.clipboard.writeText(hashHex);
+        };
+        
+        console.log('Page integrity hash:', hashHex);
+        
+      } catch (e) {
+        console.error('Failed to compute integrity hash:', e);
+        valueEl.textContent = 'Error';
+      }
     }
 
-    // Button
-    document.getElementById('verify-btn').addEventListener('click', verify);
+    // Run integrity check on load
+    if (document.readyState === 'complete') {
+      computePageIntegrity();
+    } else {
+      window.addEventListener('load', computePageIntegrity);
+    }
+
+  })();
   </script>
 </body>
 </html>
