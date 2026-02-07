@@ -118,18 +118,6 @@ Pure JavaScript, zero dependencies:
 
 ---
 
-## Programmatic Use
-
-```javascript
-const SPV = require('./spv.js');
-
-const envelope = await SPV.createEnvelope(txid);
-const result = SPV.verify(envelope);
-const envelopes = await SPV.createEnvelopeForAddress(address);
-```
-
----
-
 ## Limitations
 
 - Single UTXO per transaction (no coin selection)
