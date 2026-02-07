@@ -58,7 +58,7 @@ Verify you're running authentic, untampered code:
 
 **signer.html SHA-256:**
 ```
-eecf1a37533889586bd81c9938a5c606795c16b5437cbe505c6d423af798f0ac
+139a375d9fe95c87e438378ade769db90bfab6e6e87dd272740986f155caa32f
 ```
 
 Compare with the hash displayed in the page footer. Click the footer hash to copy.
