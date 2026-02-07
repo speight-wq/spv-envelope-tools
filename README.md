@@ -128,12 +128,6 @@ const result = SPV.verify(envelope);
 const envelopes = await SPV.createEnvelopeForAddress(address);
 ```
 
-```bash
-node cli.js create <txid>
-node cli.js verify envelope.json
-node cli.js address <address>
-```
-
 ---
 
 ## Limitations
